@@ -205,6 +205,46 @@
     .add-base input:focus{outline:2px solid var(--vermelho);outline-offset:-1px;background:#fff}
     .link.colar{margin:4px 16px 12px}
     .campo textarea{width:100%;padding:8px 10px;border:1px solid var(--campo-borda);background:var(--campo);font-size:14px;font-family:inherit;resize:vertical}
+    .content-wrapper.largo{max-width:none}
+    table.qlp{font-size:12.5px}
+    table.qlp td,table.qlp th{padding:8px 10px}
+    table.qlp td{white-space:nowrap}
+    table.qlp td.nome{white-space:normal;min-width:200px;font-weight:600}
+    table.qlp td.data{font-variant-numeric:tabular-nums}
+    th.ord{cursor:pointer;user-select:none}
+    th.ord:hover{color:var(--texto)}
+    th.ord.ativo{color:var(--texto)}
+    th.ord[data-seta]:not([data-seta=""])::after{content:" " attr(data-seta);font-size:9px}
+    tr.desligado td{color:var(--texto-3)}
+    tr.desligado td.nome{text-decoration:line-through;text-decoration-color:var(--linha)}
+    .venc{padding:1px 6px}
+    .venc.laranja{background:#FDE7C8;color:#8A4B00;font-weight:600}
+    .venc.vermelho{background:#F9D4D1;color:var(--vermelho-escuro);font-weight:600}
+    .st-verde{color:var(--verde);border-color:#BFD9CB;background:#EEF6F1}
+    .st-vermelho{color:var(--vermelho-escuro);border-color:#EBC0BC;background:#FBEDEC}
+    .st-amarelo{color:var(--ambar);border-color:#E6D3A8;background:#FBF4E4}
+    .st-neutro{color:var(--texto-2);border-color:var(--linha);background:var(--faixa)}
+    .notinha{background:none;border:1px solid transparent;cursor:pointer;font-size:13px;padding:2px 6px;color:var(--texto-3);opacity:.55}
+    .notinha.tem{opacity:1;color:var(--texto);border-color:var(--linha)}
+    .notinha:hover{opacity:1;border-color:var(--linha)}
+    .toolbar select{padding:8px 10px;border:1px solid var(--linha);font-size:14px;background:#fff;font-family:inherit}
+    .janela.janela-larga{max-width:860px}
+    .janela-corpo.tres{grid-template-columns:repeat(4,1fr)}
+    .janela-corpo.tres .campo.dois{grid-column:span 2}
+    .vencimentos{display:flex;flex-wrap:wrap;gap:6px 24px;align-items:baseline;background:var(--faixa);border:1px solid var(--linha-leve);padding:10px 12px;font-size:13px}
+    .vencimentos:empty{display:none}
+    .vencimentos small{color:var(--texto-3)}
+    .notas{border-top:1px solid var(--linha-leve);padding-top:12px}
+    .nova-nota{display:flex;gap:8px;align-items:flex-start}
+    .nova-nota textarea{flex:1;padding:8px 10px;border:1px solid var(--campo-borda);background:var(--campo);font-size:14px;font-family:inherit;resize:vertical}
+    .nova-nota textarea:focus{outline:2px solid var(--vermelho);outline-offset:-1px;background:#fff}
+    #listaNotas{margin-top:10px;max-height:220px;overflow-y:auto}
+    .nota{border-left:3px solid var(--linha);padding:6px 10px;margin-bottom:8px;background:#FAFAF8}
+    .nota-cab{font-size:11px;color:var(--texto-3);display:flex;justify-content:space-between;align-items:center;font-weight:600;letter-spacing:.02em}
+    .nota-texto{font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+    .sem-notas{font-size:13px;color:var(--texto-3)}
+    .autoria-janela{margin-right:auto;font-size:12px;color:var(--texto-3);align-self:center}
+    @media (max-width:760px){.janela-corpo.tres{grid-template-columns:1fr 1fr}}
     @media (max-width:700px){.form-linha,.form-senha,.linha-entrada,.form-sync{grid-template-columns:1fr}}
 
   </style>
@@ -290,7 +330,7 @@
   <div class="content active" id="abaPainel">
     <div class="content-wrapper">
       <div class="stats-grid">
-        <div class="stat-card"><div class="stat-label">Colaboradores</div><div class="stat-value" id="totalColaboradores">0</div><div class="stat-nota">cadastrados no QLP</div></div>
+        <div class="stat-card"><div class="stat-label">Ativos</div><div class="stat-value" id="totalColaboradores">0</div><div class="stat-nota" id="notaTotal"></div></div>
         <div class="stat-card"><div class="stat-label">1ª avaliação próxima</div><div class="stat-value ambar" id="em45Dias">0</div><div class="stat-nota" id="nota45"></div></div>
         <div class="stat-card"><div class="stat-label">2ª avaliação próxima</div><div class="stat-value ambar" id="em90Dias">0</div><div class="stat-nota" id="nota90"></div></div>
         <div class="stat-card"><div class="stat-label">Efetivados</div><div class="stat-value verde" id="efetivados">0</div><div class="stat-nota" id="notaEfet"></div></div>
@@ -309,32 +349,50 @@
 
   <!-- COLABORADORES -->
   <div class="content" id="abaColaboradores">
-    <div class="content-wrapper">
+    <div class="content-wrapper largo">
       <div class="section">
-        <div class="section-title">Colaboradores em período de experiência</div>
+        <div class="section-title">Quadro de lotação de pessoal</div>
         <div class="toolbar">
-          <input type="text" id="filtroNome" placeholder="Buscar por nome, cargo, setor, gestor, turno ou status" oninput="renderizarColaboradores()">
+          <input type="text" id="filtroNome" placeholder="Buscar por nome, matrícula, cargo, gestor, setor ou turno" oninput="renderizarColaboradores()">
+          <select id="filtroStatus" onchange="renderizarColaboradores()" aria-label="Filtrar por status"></select>
           <span class="contagem" id="contagemColab"></span>
+          <button class="btn" data-pode="dados" onclick="importarColaboradores()">Importar planilha</button>
           <button class="btn btn-primary" data-pode="cadastrar" onclick="abrirCadastro()">＋ Novo colaborador</button>
         </div>
         <div class="tabela-rolagem">
-          <table id="tabelaColaboradores">
-            <thead><tr><th>Nome</th><th>Cargo</th><th>Setor</th><th>Gestor</th><th>Status</th><th>Admissão</th><th class="num">Dias de casa</th><th>1ª avaliação</th><th>2ª avaliação</th><th>Experiência</th><th></th></tr></thead>
+          <table id="tabelaColaboradores" class="qlp">
+            <thead><tr>
+              <th class="ord num" data-ord="posicao">Nº</th>
+              <th class="ord" data-ord="matricula">Matrícula</th>
+              <th class="ord" data-ord="nome">Nome completo</th>
+              <th class="ord" data-ord="cargo">Cargo</th>
+              <th class="ord" data-ord="tipo">Tipo</th>
+              <th class="ord" data-ord="adm">Admissão</th>
+              <th class="ord" data-ord="venc1" id="thVenc1">1ª experiência</th>
+              <th class="ord" data-ord="venc2" id="thVenc2">2ª experiência</th>
+              <th class="ord" data-ord="status">Status</th>
+              <th class="ord" data-ord="gestor">Gestor imediato</th>
+              <th class="ord" data-ord="setor">Setor</th>
+              <th class="ord" data-ord="turno">Turno</th>
+              <th>Obs.</th>
+              <th></th>
+            </tr></thead>
             <tbody></tbody>
           </table>
         </div>
+        <div class="section-rodape">Vencimentos: <span class="venc laranja">laranja</span> vence em 8 a 15 dias · <span class="venc vermelho">vermelho</span> vence em até 7 dias. Contagem conforme CLT: o dia da admissão é o dia 1. Clique no título de uma coluna para ordenar.</div>
       </div>
     </div>
   </div>
 
   <!-- RELATÓRIO -->
   <div class="content" id="abaRelatorio">
-    <div class="content-wrapper">
+    <div class="content-wrapper largo">
       <div class="section">
         <div class="section-title">Relatório de experiência <button class="btn" data-pode="dados" onclick="exportarCSV()">Exportar CSV</button></div>
         <div class="tabela-rolagem">
-          <table id="tabelaRelatorio">
-            <thead><tr><th>Nome</th><th>Cargo</th><th>Gestor</th><th>Turno</th><th>Tipo</th><th>Admissão</th><th id="thP1">1ª avaliação</th><th id="thP2">2ª avaliação</th><th>Status</th></tr></thead>
+          <table id="tabelaRelatorio" class="qlp">
+            <thead><tr><th class="num">Nº</th><th>Matrícula</th><th>Nome completo</th><th>Cargo</th><th>Tipo</th><th>Admissão</th><th id="thP1">1ª experiência</th><th id="thP2">2ª experiência</th><th>Status</th><th>Gestor imediato</th><th>Setor</th><th>Turno</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
@@ -452,47 +510,68 @@
 </div>
 
 <div class="janela-fundo" id="janelaCadastro" onclick="if(event.target===this)fecharCadastro()">
-  <div class="janela" role="dialog" aria-modal="true" aria-labelledby="janelaTitulo">
+  <div class="janela janela-larga" role="dialog" aria-modal="true" aria-labelledby="janelaTitulo">
     <div class="janela-topo" id="janelaTitulo">Novo colaborador</div>
-    <div class="janela-corpo">
+    <div class="janela-corpo tres">
+      <div class="campo">
+        <label for="cPosicao">Nº posição <span class="obrig">*</span></label>
+        <input id="cPosicao" type="number" min="1" step="1">
+        <div class="erro" id="ePosicao"></div>
+      </div>
+      <div class="campo">
+        <label for="cMatricula">Matrícula <span class="obrig">*</span></label>
+        <input id="cMatricula" autocomplete="off" inputmode="numeric">
+        <div class="erro" id="eMatricula"></div>
+      </div>
+      <div class="campo">
+        <label for="cAdm">Data de admissão <span class="obrig">*</span></label>
+        <input id="cAdm" type="date" oninput="mostrarVencimentos()">
+        <div class="erro" id="eAdm"></div>
+      </div>
       <div class="campo inteiro">
-        <label for="cNome">Nome completo <span class="obrig">*</span></label>
+        <label for="cNome">Nome completo do colaborador <span class="obrig">*</span></label>
         <input id="cNome" autocomplete="off">
         <div class="erro" id="eNome"></div>
       </div>
-      <div class="campo">
+      <div class="campo dois">
         <label for="cCargo">Cargo <span class="obrig">*</span></label>
         <select id="cCargo" onchange="escolheuNoMenu(this)"></select>
         <div class="erro" id="eCargo"></div>
+      </div>
+      <div class="campo">
+        <label for="cTipo">Tipo de contratação</label>
+        <select id="cTipo" onchange="escolheuNoMenu(this)"></select>
+      </div>
+      <div class="campo">
+        <label for="cStatus">Status</label>
+        <select id="cStatus" onchange="escolheuNoMenu(this)"></select>
+      </div>
+      <div class="campo dois">
+        <label for="cGestor">Gestor imediato</label>
+        <select id="cGestor" onchange="escolheuNoMenu(this)"></select>
       </div>
       <div class="campo">
         <label for="cSetor">Setor</label>
         <select id="cSetor" onchange="escolheuNoMenu(this)"></select>
       </div>
       <div class="campo">
-        <label for="cStatus">Status</label>
-        <select id="cStatus" onchange="escolheuNoMenu(this)"></select>
-      </div>
-      <div class="campo">
-        <label for="cGestor">Gestor</label>
-        <select id="cGestor" onchange="escolheuNoMenu(this)"></select>
-      </div>
-      <div class="campo">
         <label for="cTurno">Turno</label>
         <select id="cTurno" onchange="escolheuNoMenu(this)"></select>
       </div>
-      <div class="campo">
-        <label for="cTipo">Tipo de contratação</label>
-        <select id="cTipo" onchange="escolheuNoMenu(this)"></select>
-      </div>
+      <div class="campo inteiro vencimentos" id="cVenc"></div>
       <div class="campo inteiro" id="dicaBase"><small>Não achou o item no menu? Peça à administradora para incluí-lo na Base.</small></div>
-      <div class="campo">
-        <label for="cAdm">Data de admissão <span class="obrig">*</span></label>
-        <input id="cAdm" type="date">
-        <div class="erro" id="eAdm"></div>
+
+      <div class="campo inteiro notas">
+        <label for="cNota">Observações</label>
+        <div class="nova-nota">
+          <textarea id="cNota" rows="2" placeholder="Escreva uma observação…"></textarea>
+          <button class="btn" type="button" onclick="adicionarNota()">Adicionar nota</button>
+        </div>
+        <div id="listaNotas"></div>
       </div>
     </div>
     <div class="janela-rodape">
+      <span class="autoria-janela" id="autoriaJanela"></span>
       <button class="btn btn-secondary" onclick="fecharCadastro()">Cancelar</button>
       <button class="btn btn-primary" id="btnSalvarColab" onclick="salvarCadastro()">Salvar</button>
     </div>
@@ -540,8 +619,8 @@
 // =====================================================================
 // QLP - Fagron Services Brazil
 // =====================================================================
-const VERSAO_APP = 5;              // subir sempre que o formato dos dados mudar
-const ROTULO_VERSAO = 'QLP v2.5';
+const VERSAO_APP = 6;              // subir sempre que o formato dos dados mudar
+const ROTULO_VERSAO = 'QLP v2.6';
 const GH_API = 'https://api.github.com';
 const REPO_PADRAO = 'RecrutamentoeSelecao/qlp-fagron-dados';   // repositório privado dos dados
 const ARQUIVO = 'dados.json';
@@ -755,7 +834,7 @@ function naFila(fn) { const p = fila.then(() => fn(), () => fn()); fila = p.catc
 // Mesclagem em três vias: ponto de partida × minha versão × versão deles
 // ---------------------------------------------------------------------
 function assin(o) { return o === undefined ? '∅' : JSON.stringify(o); }
-function fundirLista(base, meu, deles) {
+function fundirLista(base, meu, deles, resolver) {
   const idx = a => new Map((a || []).map(x => [String(x.id), x]));
   const B = idx(base), M = idx(meu), D = idx(deles);
   const ids = new Set([...M.keys(), ...D.keys(), ...B.keys()]);
@@ -767,6 +846,7 @@ function fundirLista(base, meu, deles) {
     if (sm === sd) r = m;
     else if (sm === sb) r = d;          // só o outro lado mexeu (inclusive se apagou)
     else if (sd === sb) r = m;          // só eu mexi (inclusive se apaguei)
+    else if (resolver && m !== undefined && d !== undefined) { conflitos++; r = resolver(b, m, d); }
     else { conflitos++; r = m !== undefined ? m : d; }  // os dois mexeram: fica a minha; apagado × alterado: fica a alteração
     if (r !== undefined) lista.push(r);
   }
@@ -878,7 +958,8 @@ async function puxar() {
   }
   const baseCofre = anterior && anterior.cofre && anterior.cofre.idBase === ID_BASE ? anterior.cofre : null;
   const base = baseCofre ? normalizarEstado(await decifrar(baseCofre)) : { colaboradores: [], pessoas: [], parametros: undefined, base: baseVazia() };
-  const fc = fundirLista(base.colaboradores, ESTADO.colaboradores, deles.colaboradores);
+  const fc = fundirLista(base.colaboradores, ESTADO.colaboradores, deles.colaboradores,
+    (b, m, d) => ({ ...m, notas: fundirLista(b && b.notas, m.notas, d.notas).lista }));
   const fp = fundirLista(base.pessoas, ESTADO.pessoas, deles.pessoas);
   const fk = fundirLista(baseCofre ? baseCofre.chaves : [], CHAVES, r.cofre.chaves);
   ESTADO = {
@@ -1331,13 +1412,16 @@ function mostrarEstado() {
 function atualizarPainel() {
   let n1 = 0, n2 = 0, ef = 0;
   const proximos = [];
-  ESTADO.colaboradores.forEach(c => {
+  const vigentes = ESTADO.colaboradores.filter(c => !ehDesligado(c));
+  vigentes.forEach(c => {
     const s = situacao(c); if (!s) return;
     if (s.fase === 'p1' && s.faltam1 <= JANELA_ALERTA) { n1++; proximos.push({ c, qual: '1ª avaliação', data: s.venc1, faltam: s.faltam1 }); }
     if (s.fase === 'p2' && s.faltam2 <= JANELA_ALERTA) { n2++; proximos.push({ c, qual: '2ª avaliação', data: s.venc2, faltam: s.faltam2 }); }
     if (s.fase === 'fim') ef++;
   });
-  $('totalColaboradores').textContent = ESTADO.colaboradores.length;
+  const conta = v => ESTADO.colaboradores.filter(c => semAcento(c.status) === v).length;
+  $('totalColaboradores').textContent = ESTADO.colaboradores.filter(c => ['ATIVO', ''].includes(semAcento(c.status || ''))).length;
+  $('notaTotal').textContent = `${conta('AFASTADO')} afastado(s) · ${conta('DESLIGADO')} desligado(s)`;
   $('em45Dias').textContent = n1;
   $('em90Dias').textContent = n2;
   $('efetivados').textContent = ef;
@@ -1354,51 +1438,17 @@ function atualizarPainel() {
     : `<tr><td colspan="6" class="empty-state">Nenhuma avaliação vence nos próximos ${JANELA_ALERTA} dias.</td></tr>`;
 }
 
-function renderizarColaboradores() {
-  const tbody = document.querySelector('#tabelaColaboradores tbody');
-  const termo = semAcento($('filtroNome').value.trim());
-  const todos = ESTADO.colaboradores;
-  const lista = todos
-    .filter(c => !termo || semAcento(`${c.nome} ${c.cargo} ${c.setor || ''} ${c.gestor || ''} ${c.turno || ''} ${c.tipo || ''} ${c.status || ''}`).includes(termo))
-    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-  $('contagemColab').textContent = termo ? `${lista.length} de ${todos.length} colaboradores` : `${todos.length} colaboradores`;
-  if (!todos.length) {
-    tbody.innerHTML = `<tr><td colspan="11" class="empty-state"><p>Nenhum colaborador cadastrado.</p>${pode('cadastrar') ? '<button class="btn btn-primary" onclick="abrirCadastro()">＋ Cadastrar o primeiro</button>' : ''}</td></tr>`;
-    return;
-  }
-  if (!lista.length) { tbody.innerHTML = '<tr><td colspan="11" class="empty-state"><p>Nenhum resultado para a busca.</p></td></tr>'; return; }
-  tbody.innerHTML = lista.map(col => {
-    const s = situacao(col);
-    const autoria = col._por ? ` title="Última alteração: ${esc(col._por)} em ${esc(new Date(col._em).toLocaleString('pt-BR'))}"` : '';
-    return `<tr${autoria}>
-      <td>${esc(col.nome)}</td>
-      <td>${esc(col.cargo)}</td>
-      <td>${esc(col.setor) || '—'}</td>
-      <td>${esc(col.gestor) || '—'}</td>
-      <td>${esc(col.status) || '—'}</td>
-      <td>${esc(col.dataAdmissao)}</td>
-      <td class="num">${s && s.dia >= 1 ? s.dia : '—'}</td>
-      <td>${s ? fmt(s.venc1) : '—'}</td>
-      <td>${s ? fmt(s.venc2) : '—'}</td>
-      <td>${selo(s)}</td>
-      <td class="acoes">
-        ${pode('cadastrar') ? `<button class="btn btn-secondary" onclick="abrirCadastro('${esc(col.id)}')" aria-label="Editar ${esc(col.nome)}">Editar</button>` : ''}
-        ${pode('excluir') ? `<button class="btn btn-danger" onclick="excluirColaborador('${esc(col.id)}')" aria-label="Excluir ${esc(col.nome)}">Excluir</button>` : ''}
-      </td>
-    </tr>`;
-  }).join('');
-}
-
 function renderizarRelatorio() {
   const tbody = document.querySelector('#tabelaRelatorio tbody');
-  const lista = [...ESTADO.colaboradores].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-  $('thP1').textContent = `1ª avaliação (${ESTADO.parametros.periodo1}d)`;
-  $('thP2').textContent = `2ª avaliação (${ESTADO.parametros.periodo2}d)`;
+  const lista = [...ESTADO.colaboradores].sort((a, b) => (+a.posicao || 1e9) - (+b.posicao || 1e9) || a.nome.localeCompare(b.nome, 'pt-BR'));
+  $('thP1').textContent = `1ª experiência (${ESTADO.parametros.periodo1}d)`;
+  $('thP2').textContent = `2ª experiência (${ESTADO.parametros.periodo2}d)`;
   tbody.innerHTML = lista.length ? lista.map(col => {
     const s = situacao(col);
-    return `<tr><td>${esc(col.nome)}</td><td>${esc(col.cargo)}</td><td>${esc(col.gestor) || '—'}</td><td>${esc(col.turno) || '—'}</td><td>${esc(col.tipo) || '—'}</td><td>${esc(col.dataAdmissao)}</td>
-      <td>${s ? fmt(s.venc1) : '—'}</td><td>${s ? fmt(s.venc2) : '—'}</td><td>${selo(s)}</td></tr>`;
-  }).join('') : '<tr><td colspan="9" class="empty-state">Nenhum colaborador cadastrado.</td></tr>';
+    return `<tr><td class="num">${esc(col.posicao) || '—'}</td><td>${esc(col.matricula) || '—'}</td><td>${esc(col.nome)}</td><td>${esc(col.cargo)}</td>
+      <td>${esc(col.tipo) || '—'}</td><td>${esc(col.dataAdmissao)}</td><td>${s ? fmt(s.venc1) : '—'}</td><td>${s ? fmt(s.venc2) : '—'}</td>
+      <td>${esc(col.status) || '—'}</td><td>${esc(col.gestor) || '—'}</td><td>${esc(col.setor) || '—'}</td><td>${esc(col.turno) || '—'}</td></tr>`;
+  }).join('') : '<tr><td colspan="12" class="empty-state">Nenhum colaborador cadastrado.</td></tr>';
 }
 
 function renderizarParametros() {
@@ -1682,54 +1732,6 @@ function escolheuNoMenu(el) {
   if (!existente) mostrarAviso(`${v} incluído na Base`);
 }
 function preencherSugestoes() {}
-function limparErros() { ['Nome', 'Cargo', 'Adm'].forEach(k => { $('e' + k).textContent = ''; $('c' + k).classList.remove('invalido'); }); }
-function marcarErro(k, msg) { $('e' + k).textContent = msg; $('c' + k).classList.add('invalido'); }
-
-function abrirCadastro(id) {
-  if (!pode('cadastrar')) return;
-  editandoId = id ?? null;
-  const col = editandoId != null ? ESTADO.colaboradores.find(c => c.id === editandoId) : null;
-  $('janelaTitulo').textContent = col ? 'Editar colaborador' : 'Novo colaborador';
-  $('btnSalvarColab').textContent = col ? 'Salvar alterações' : 'Cadastrar';
-  $('cNome').value = col ? col.nome : '';
-  CAMPOS_MENU.forEach(cm => montarMenu(cm, col ? (col[cm.campo] || '') : ''));
-  if (!col) { const ativo = ESTADO.base.status.find(v => semAcento(v) === 'ATIVO'); if (ativo) $('cStatus').value = ativo; }
-  $('dicaBase').hidden = pode('incluirBase');
-  $('cAdm').value = col ? paraISO(col.dataAdmissao) : '';
-  limparErros(); preencherSugestoes();
-  $('janelaCadastro').classList.add('aberta');
-  $('cNome').focus();
-}
-function fecharCadastro() { $('janelaCadastro').classList.remove('aberta'); editandoId = null; }
-
-function salvarCadastro() {
-  if (!pode('cadastrar')) return;
-  limparErros();
-  const lerMenu = id => { const v = $(id).value; return v === NOVO ? '' : v; };
-  const nome = limpaTexto($('cNome').value), cargo = lerMenu('cCargo');
-  const setor = lerMenu('cSetor'), status = lerMenu('cStatus'), gestor = lerMenu('cGestor'), turno = lerMenu('cTurno'), tipo = lerMenu('cTipo'), adm = $('cAdm').value;
-  let ok = true;
-  if (nome.split(' ').length < 2) { marcarErro('Nome', 'Informe nome e sobrenome.'); ok = false; }
-  if (!cargo) { marcarErro('Cargo', 'Informe o cargo.'); ok = false; }
-  if (!adm) { marcarErro('Adm', 'Informe a data de admissão.'); ok = false; }
-  else if (!dataValida(adm)) { marcarErro('Adm', 'Data inválida.'); ok = false; }
-  if (!ok) return;
-  const dataBR = paraBR(adm);
-  if (ESTADO.colaboradores.find(c => c.id !== editandoId && semAcento(c.nome) === semAcento(nome) && c.dataAdmissao === dataBR)) {
-    marcarErro('Nome', 'Já existe esse nome com a mesma data de admissão.'); return;
-  }
-  const carimbo = { _por: EU.nome, _em: agoraISO() };
-  if (editandoId != null) {
-    const col = ESTADO.colaboradores.find(c => c.id === editandoId);
-    Object.assign(col, { nome, cargo, setor, status, gestor, turno, tipo, dataAdmissao: dataBR, ...carimbo });
-    mostrarAviso('Alterações salvas');
-  } else {
-    ESTADO.colaboradores.push({ id: novoId('c'), nome, cargo, setor, status, gestor, turno, tipo, dataAdmissao: dataBR, ...carimbo });
-    mostrarAviso(`${nome} cadastrado(a)`);
-  }
-  fecharCadastro(); alterou(); render();
-}
-
 function excluirColaborador(id) {
   if (!pode('excluir')) return;
   const col = ESTADO.colaboradores.find(c => c.id === id); if (!col) return;
@@ -1737,6 +1739,242 @@ function excluirColaborador(id) {
   ESTADO.colaboradores = ESTADO.colaboradores.filter(c => c.id !== id);
   alterou(); render();
   mostrarAviso(`${col.nome} excluído(a)`);
+}
+
+// ---------------------------------------------------------------------
+// Colaboradores (aba QLP)
+// ---------------------------------------------------------------------
+const ESTILO_STATUS = { 'ATIVO': 'st-verde', 'DESLIGADO': 'st-vermelho', 'AFASTADO': 'st-amarelo' };
+let ordem = { campo: 'posicao', asc: true };
+let notasEdicao = [];
+
+function ehDesligado(c) { return semAcento(c.status) === 'DESLIGADO'; }
+function classeVenc(faltam) { return faltam < 0 ? '' : faltam <= 7 ? 'vermelho' : faltam <= 15 ? 'laranja' : ''; }
+function celVenc(data, faltam, col) {
+  const cls = ehDesligado(col) ? '' : classeVenc(faltam);
+  return `<td class="data"><span class="venc ${cls}" ${cls ? `title="${faltamTexto(faltam)}"` : ''}>${fmt(data)}</span></td>`;
+}
+function seloStatus(v) {
+  if (!v) return '—';
+  return `<span class="badge ${ESTILO_STATUS[semAcento(v)] || 'st-neutro'}">${esc(v)}</span>`;
+}
+function proximaPosicao() { return ESTADO.colaboradores.reduce((m, c) => Math.max(m, +c.posicao || 0), 0) + 1; }
+
+function valorOrdem(c, campo) {
+  if (campo === 'posicao') return +c.posicao || 1e9;
+  if (campo === 'matricula') return (c.matricula || '').padStart(12, '0');
+  if (campo === 'adm') { const d = lerDataBR(c.dataAdmissao); return d ? d.getTime() : 0; }
+  if (campo === 'venc1' || campo === 'venc2') { const s = situacao(c); return s ? s[campo].getTime() : 0; }
+  return semAcento(c[campo] || '');
+}
+function ordenarPor(campo) {
+  ordem = ordem.campo === campo ? { campo, asc: !ordem.asc } : { campo, asc: true };
+  renderizarColaboradores();
+}
+
+function renderizarColaboradores() {
+  const tbody = document.querySelector('#tabelaColaboradores tbody');
+  const fs = $('filtroStatus');
+  const escolhido = fs.value;
+  fs.innerHTML = '<option value="">Todos os status</option>' + ordenar(ESTADO.base.status).map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+  fs.value = escolhido;
+  const termo = semAcento($('filtroNome').value.trim());
+  const todos = ESTADO.colaboradores;
+  const lista = todos
+    .filter(c => !fs.value || semAcento(c.status) === semAcento(fs.value))
+    .filter(c => !termo || semAcento([c.posicao, c.matricula, c.nome, c.cargo, c.tipo, c.status, c.gestor, c.setor, c.turno].join(' ')).includes(termo))
+    .sort((a, b) => {
+      const x = valorOrdem(a, ordem.campo), y = valorOrdem(b, ordem.campo);
+      const r = x < y ? -1 : x > y ? 1 : a.nome.localeCompare(b.nome, 'pt-BR');
+      return ordem.asc ? r : -r;
+    });
+  document.querySelectorAll('#tabelaColaboradores th.ord').forEach(th => {
+    th.classList.toggle('ativo', th.dataset.ord === ordem.campo);
+    th.dataset.seta = th.dataset.ord === ordem.campo ? (ordem.asc ? '▲' : '▼') : '';
+  });
+  $('thVenc1').textContent = `1ª experiência (${ESTADO.parametros.periodo1}d)`;
+  $('thVenc2').textContent = `2ª experiência (${ESTADO.parametros.periodo2}d)`;
+  $('contagemColab').textContent = lista.length === todos.length ? `${todos.length} colaboradores` : `${lista.length} de ${todos.length}`;
+  if (!todos.length) {
+    tbody.innerHTML = `<tr><td colspan="14" class="empty-state"><p>Nenhum colaborador cadastrado.</p>${pode('cadastrar') ? '<button class="btn btn-primary" onclick="abrirCadastro()">＋ Cadastrar o primeiro</button>' : ''}</td></tr>`;
+    return;
+  }
+  if (!lista.length) { tbody.innerHTML = '<tr><td colspan="14" class="empty-state"><p>Nenhum resultado para a busca.</p></td></tr>'; return; }
+  tbody.innerHTML = lista.map(col => {
+    const s = situacao(col);
+    const autoria = col._por ? ` title="Última alteração: ${esc(col._por)} em ${esc(new Date(col._em).toLocaleString('pt-BR'))}"` : '';
+    const nNotas = (col.notas || []).length;
+    return `<tr${autoria}${ehDesligado(col) ? ' class="desligado"' : ''}>
+      <td class="num">${esc(col.posicao) || '—'}</td>
+      <td>${esc(col.matricula) || '—'}</td>
+      <td class="nome">${esc(col.nome)}</td>
+      <td>${esc(col.cargo)}</td>
+      <td>${esc(col.tipo) || '—'}</td>
+      <td class="data">${esc(col.dataAdmissao)}</td>
+      ${s ? celVenc(s.venc1, s.faltam1, col) + celVenc(s.venc2, s.faltam2, col) : '<td>—</td><td>—</td>'}
+      <td>${seloStatus(col.status)}</td>
+      <td>${esc(col.gestor) || '—'}</td>
+      <td>${esc(col.setor) || '—'}</td>
+      <td>${esc(col.turno) || '—'}</td>
+      <td class="centro">${pode('cadastrar')
+        ? `<button class="notinha${nNotas ? ' tem' : ''}" onclick="abrirCadastro('${esc(col.id)}', true)" aria-label="Observações de ${esc(col.nome)}" title="${nNotas ? esc(col.notas[col.notas.length - 1].texto) : 'Sem observações'}">📝${nNotas ? ` ${nNotas}` : ''}</button>`
+        : (nNotas ? `<span title="${esc(col.notas[col.notas.length - 1].texto)}">📝 ${nNotas}</span>` : '')}</td>
+      <td class="acoes">
+        ${pode('cadastrar') ? `<button class="btn btn-secondary" onclick="abrirCadastro('${esc(col.id)}')" aria-label="Editar ${esc(col.nome)}">Editar</button>` : ''}
+        ${pode('excluir') ? `<button class="btn btn-danger" onclick="excluirColaborador('${esc(col.id)}')" aria-label="Excluir ${esc(col.nome)}">Excluir</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function limparErros() {
+  ['Posicao', 'Matricula', 'Nome', 'Cargo', 'Adm'].forEach(k => { $('e' + k).textContent = ''; $('c' + k).classList.remove('invalido'); });
+}
+function marcarErro(k, msg) { $('e' + k).textContent = msg; $('c' + k).classList.add('invalido'); }
+
+function mostrarVencimentos() {
+  const iso = $('cAdm').value;
+  if (!dataValida(iso)) { $('cVenc').innerHTML = ''; return; }
+  const s = situacao({ dataAdmissao: paraBR(iso) });
+  $('cVenc').innerHTML = `<span>1ª experiência (${ESTADO.parametros.periodo1} dias): <strong>${fmt(s.venc1)}</strong></span>
+    <span>2ª experiência (${ESTADO.parametros.periodo2} dias): <strong>${fmt(s.venc2)}</strong></span>
+    <small>calculadas sozinhas — o dia da admissão é o dia 1</small>`;
+}
+
+function renderizarNotas() {
+  const ordenadas = notasEdicao.map((n, i) => ({ ...n, i })).sort((a, b) => (b.em || '').localeCompare(a.em || ''));
+  $('listaNotas').innerHTML = ordenadas.length ? ordenadas.map(n => `<div class="nota">
+      <div class="nota-cab">${esc(new Date(n.em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }))} · ${esc(n.por || '—')}
+        ${(EU.perfil === 'admin' || n.por === EU.nome) ? `<button class="icone" onclick="apagarNota(${n.i})" aria-label="Apagar nota">✕</button>` : ''}</div>
+      <div class="nota-texto">${esc(n.texto)}</div></div>`).join('')
+    : '<div class="sem-notas">Nenhuma observação.</div>';
+}
+function adicionarNota() {
+  const texto = $('cNota').value.trim();
+  if (!texto) { $('cNota').focus(); return; }
+  notasEdicao.push({ id: novoId('n'), texto, por: EU.nome, em: agoraISO() });
+  $('cNota').value = '';
+  renderizarNotas();
+  $('cNota').focus();
+}
+function apagarNota(i) {
+  if (!confirm('Apagar esta observação?')) return;
+  notasEdicao.splice(i, 1);
+  renderizarNotas();
+}
+
+function abrirCadastro(id, focarNotas) {
+  if (!pode('cadastrar')) return;
+  editandoId = id ?? null;
+  const col = editandoId != null ? ESTADO.colaboradores.find(c => c.id === editandoId) : null;
+  $('janelaTitulo').textContent = col ? `Editar — ${col.nome}` : 'Novo colaborador';
+  $('btnSalvarColab').textContent = col ? 'Salvar alterações' : 'Cadastrar';
+  $('cPosicao').value = col ? (col.posicao || '') : proximaPosicao();
+  $('cMatricula').value = col ? (col.matricula || '') : '';
+  $('cNome').value = col ? col.nome : '';
+  $('cAdm').value = col ? paraISO(col.dataAdmissao) : '';
+  CAMPOS_MENU.forEach(cm => montarMenu(cm, col ? (col[cm.campo] || '') : ''));
+  if (!col) { const ativo = ESTADO.base.status.find(v => semAcento(v) === 'ATIVO'); if (ativo) $('cStatus').value = ativo; }
+  $('dicaBase').hidden = pode('incluirBase');
+  notasEdicao = col ? (col.notas || []).map(n => ({ ...n })) : [];
+  $('cNota').value = '';
+  $('autoriaJanela').textContent = col && col._por ? `Última alteração: ${col._por}, ${new Date(col._em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}` : '';
+  renderizarNotas(); mostrarVencimentos(); limparErros();
+  $('janelaCadastro').classList.add('aberta');
+  (focarNotas ? $('cNota') : col ? $('cNome') : $('cMatricula')).focus();
+}
+function fecharCadastro() {
+  if ($('cNota').value.trim() && !confirm('Há uma observação escrita que não foi adicionada. Fechar mesmo assim?')) return;
+  $('janelaCadastro').classList.remove('aberta'); editandoId = null;
+}
+
+function salvarCadastro() {
+  if (!pode('cadastrar')) return;
+  if ($('cNota').value.trim()) adicionarNota();          // observação digitada e não adicionada entra junto
+  limparErros();
+  const lerMenu = id => { const v = $(id).value; return v === NOVO ? '' : v; };
+  const posicao = parseInt($('cPosicao').value, 10);
+  const matricula = $('cMatricula').value.trim().replace(/\s+/g, '');
+  const nome = limpaTexto($('cNome').value), adm = $('cAdm').value;
+  const dados = {
+    cargo: lerMenu('cCargo'), tipo: lerMenu('cTipo'), status: lerMenu('cStatus'),
+    gestor: lerMenu('cGestor'), setor: lerMenu('cSetor'), turno: lerMenu('cTurno'),
+  };
+  let ok = true;
+  if (!(posicao >= 1)) { marcarErro('Posicao', 'Informe um número a partir de 1.'); ok = false; }
+  if (!matricula) { marcarErro('Matricula', 'Informe a matrícula.'); ok = false; }
+  else if (ESTADO.colaboradores.some(c => c.id !== editandoId && String(c.matricula || '') === matricula)) {
+    const outro = ESTADO.colaboradores.find(c => c.id !== editandoId && String(c.matricula || '') === matricula);
+    marcarErro('Matricula', `Matrícula já usada por ${outro.nome}.`); ok = false;
+  }
+  if (nome.split(' ').length < 2) { marcarErro('Nome', 'Informe nome e sobrenome.'); ok = false; }
+  if (!dados.cargo) { marcarErro('Cargo', 'Escolha o cargo.'); ok = false; }
+  if (!adm) { marcarErro('Adm', 'Informe a data de admissão.'); ok = false; }
+  else if (!dataValida(adm)) { marcarErro('Adm', 'Data inválida.'); ok = false; }
+  if (!ok) return;
+  if (!ehDesligado(dados)) {
+    const ocupante = ESTADO.colaboradores.find(c => c.id !== editandoId && +c.posicao === posicao && !ehDesligado(c));
+    if (ocupante && !confirm(`A posição ${posicao} já está com ${ocupante.nome} (${ocupante.status || 'sem status'}). Salvar assim mesmo?`)) return;
+  }
+  const registro = { posicao, matricula, nome, dataAdmissao: paraBR(adm), ...dados, notas: notasEdicao, _por: EU.nome, _em: agoraISO() };
+  if (editandoId != null) {
+    Object.assign(ESTADO.colaboradores.find(c => c.id === editandoId), registro);
+    mostrarAviso('Alterações salvas');
+  } else {
+    ESTADO.colaboradores.push({ id: novoId('c'), ...registro });
+    mostrarAviso(`${nome} cadastrado(a) na posição ${posicao}`);
+  }
+  $('cNota').value = '';
+  $('janelaCadastro').classList.remove('aberta'); editandoId = null;
+  alterou(); render();
+}
+
+// Importação do arquivo gerado a partir da aba QLP da planilha
+function importarColaboradores() {
+  if (!pode('dados')) return;
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json,application/json';
+  input.onchange = e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = evt => {
+      let dados;
+      try { dados = JSON.parse(evt.target.result); } catch { alert('Arquivo não reconhecido.'); return; }
+      if (!dados || !Array.isArray(dados.colaboradores)) { alert('Arquivo não reconhecido: use o arquivo de importação do QLP (.json).'); return; }
+      aplicarImportacao(dados.colaboradores);
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+function aplicarImportacao(lista) {
+  let novos = 0, repetidos = 0, invalidos = 0, itensBase = 0;
+  const campos = { cargo: 'cargos', tipo: 'tipos', status: 'status', gestor: 'gestores', setor: 'setores', turno: 'turnos' };
+  lista.forEach(c => {
+    if (!c || !c.nome || !lerDataBR(c.dataAdmissao)) { invalidos++; return; }
+    const nome = limpaTexto(c.nome);
+    if (EXEMPLOS_ANTIGOS.includes(`${nome}|${c.dataAdmissao}`)) return;
+    const matricula = String(c.matricula ?? '').trim();
+    const jaExiste = ESTADO.colaboradores.some(x => (matricula && String(x.matricula || '') === matricula)
+      || (semAcento(x.nome) === semAcento(nome) && x.dataAdmissao === c.dataAdmissao));
+    if (jaExiste) { repetidos++; return; }
+    const reg = { id: novoId('c'), posicao: +c.posicao || proximaPosicao(), matricula, nome, dataAdmissao: c.dataAdmissao, _por: EU.nome, _em: agoraISO() };
+    Object.entries(campos).forEach(([campo, k]) => {
+      let v = limpaTexto(c[campo] || (campo === 'setor' ? c.departamento : ''));
+      if (v) {
+        const achado = ESTADO.base[k].find(x => semAcento(x) === semAcento(v));
+        if (achado) v = achado; else { ESTADO.base[k].push(v); itensBase++; }
+      }
+      reg[campo] = v;
+    });
+    reg.notas = (c.notas || []).filter(n => n && n.texto).map(n => ({ id: novoId('n'), texto: String(n.texto), por: EU.nome, em: agoraISO() }));
+    ESTADO.colaboradores.push(reg); novos++;
+  });
+  alterou(); render();
+  alert(`Importação concluída.\n\n${novos} colaborador(es) incluído(s).`
+    + (repetidos ? `\n${repetidos} já existia(m) (mesma matrícula) e ficou(aram) de fora.` : '')
+    + (invalidos ? `\n${invalidos} linha(s) sem nome ou data de admissão.` : '')
+    + (itensBase ? `\n${itensBase} item(ns) novo(s) entrou(aram) na Base.` : ''));
 }
 
 // ---------------------------------------------------------------------
@@ -1754,12 +1992,12 @@ function hojeArquivo() { const d = hoje(); return `${d.getFullYear()}-${String(d
 function exportarCSV() {
   if (!pode('dados')) return;
   const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  let csv = '\uFEFFNOME;CARGO;SETOR;STATUS;GESTOR;TURNO;TIPO DE CONTRATAÇÃO;ADMISSÃO;DIAS DE CASA;1ª AVALIAÇÃO;2ª AVALIAÇÃO;EXPERIÊNCIA\n';
-  [...ESTADO.colaboradores].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).forEach(col => {
+  let csv = '\uFEFFNº POSIÇÃO;MATRÍCULA;NOME COMPLETO;CARGO;TIPO DE CONTRATAÇÃO;DATA DE ADMISSÃO;VENCIMENTO 1ª EXPERIÊNCIA;VENCIMENTO 2ª EXPERIÊNCIA;STATUS;GESTOR IMEDIATO;SETOR;TURNO;OBSERVAÇÕES\n';
+  [...ESTADO.colaboradores].sort((a, b) => (+a.posicao || 1e9) - (+b.posicao || 1e9)).forEach(col => {
     const s = situacao(col);
-    const st = s ? { futura: 'A admitir', p1: '1º período', p2: '2º período', fim: 'Efetivado' }[s.fase] : '';
-    csv += [q(col.nome), q(col.cargo), q(col.setor), q(col.status), q(col.gestor), q(col.turno), q(col.tipo), q(col.dataAdmissao),
-      s && s.dia >= 1 ? s.dia : '', q(s ? fmt(s.venc1) : ''), q(s ? fmt(s.venc2) : ''), q(st)].join(';') + '\n';
+    const obs = (col.notas || []).map(n => `${new Date(n.em).toLocaleDateString('pt-BR')} ${n.por}: ${n.texto}`).join(' | ');
+    csv += [col.posicao || '', q(col.matricula), q(col.nome), q(col.cargo), q(col.tipo), q(col.dataAdmissao),
+      q(s ? fmt(s.venc1) : ''), q(s ? fmt(s.venc2) : ''), q(col.status), q(col.gestor), q(col.setor), q(col.turno), q(obs)].join(';') + '\n';
   });
   baixar(`qlp-${hojeArquivo()}.csv`, csv, 'text/csv;charset=utf-8;');
 }
@@ -1789,23 +2027,7 @@ function restaurar() {
         location.reload();
         return;
       }
-      if (Array.isArray(dados.colaboradores)) {            // backup em texto aberto da v2.1
-        let novos = 0, repetidos = 0;
-        dados.colaboradores.forEach(c => {
-          if (!c || !c.nome || !lerDataBR(c.dataAdmissao)) return;
-          const nome = limpaTexto(c.nome);
-          if (EXEMPLOS_ANTIGOS.includes(`${nome}|${c.dataAdmissao}`)) return;
-          if (ESTADO.colaboradores.some(x => semAcento(x.nome) === semAcento(nome) && x.dataAdmissao === c.dataAdmissao)) { repetidos++; return; }
-          ESTADO.colaboradores.push({
-            id: novoId('c'), nome, cargo: limpaTexto(c.cargo), setor: limpaTexto(c.setor || c.departamento), status: limpaTexto(c.status),
-            gestor: limpaTexto(c.gestor), turno: limpaTexto(c.turno), tipo: limpaTexto(c.tipo), dataAdmissao: c.dataAdmissao, _por: EU.nome, _em: agoraISO(),
-          });
-          novos++;
-        });
-        alterou(); render();
-        alert(`Importação concluída: ${novos} colaborador(es) incluído(s)${repetidos ? `, ${repetidos} já existia(m) e ficou(aram) de fora` : ''}.`);
-        return;
-      }
+      if (Array.isArray(dados.colaboradores)) { aplicarImportacao(dados.colaboradores); return; }
       alert('Arquivo não reconhecido. Use uma cópia de segurança gerada pelo próprio QLP (.json).');
     };
     reader.readAsText(file);
@@ -1831,6 +2053,10 @@ function mudarAba(abaId, el) {
   $('aba' + abaId.charAt(0).toUpperCase() + abaId.slice(1)).classList.add('active');
   el.classList.add('active');
 }
+document.addEventListener('click', e => {
+  const th = e.target.closest && e.target.closest('#tabelaColaboradores th.ord');
+  if (th) ordenarPor(th.dataset.ord);
+});
 let avisoTimer;
 function mostrarAviso(txt) {
   const a = $('aviso');

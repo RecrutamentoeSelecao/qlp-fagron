@@ -288,6 +288,35 @@
     .barra.b-cinza{background:#C9C6C1}
     .barra-num{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
     .barra-pct{text-align:right;color:var(--texto-3);font-variant-numeric:tabular-nums}
+    .cartao-dash.largo{grid-column:1 / -1}
+    .turnover{display:grid;grid-template-columns:minmax(260px,340px) 1fr;gap:24px;padding:16px}
+    .to-numeros{display:flex;flex-direction:column;gap:18px}
+    .to-valor{font-size:30px;font-weight:600;line-height:1.1;margin:6px 0 4px;font-variant-numeric:tabular-nums}
+    .to-valor.vermelho{color:var(--vermelho-escuro)} .to-valor.verde{color:var(--verde)}
+    .colunas{display:grid;grid-template-columns:repeat(12,1fr);gap:6px;align-items:end;height:190px;border-bottom:1px solid var(--linha);padding-top:6px}
+    .coluna{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;position:relative}
+    .col-barra{width:100%;max-width:38px;background:var(--vermelho);min-height:1px}
+    .col-barra.parcial{background:repeating-linear-gradient(45deg,var(--vermelho),var(--vermelho) 4px,#E8777B 4px,#E8777B 8px)}
+    .col-valor{font-size:11px;color:var(--texto-2);margin-bottom:3px;font-variant-numeric:tabular-nums;white-space:nowrap}
+    .col-rotulo{position:absolute;bottom:-20px;font-size:11px;color:var(--texto-3)}
+    .colunas{margin-bottom:22px}
+    .blocos-motivo{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--linha-leve);border-bottom:1px solid var(--linha-leve)}
+    .bloco-motivo{background:var(--papel);padding:12px 14px;border-top:3px solid var(--linha)}
+    .bloco-motivo.m-colaborador{border-top-color:#C27C0E} .bloco-motivo.m-empresa{border-top-color:var(--vermelho)} .bloco-motivo.m-outros{border-top-color:#8C8C8C}
+    .bm-num{font-size:24px;font-weight:600} .bm-rot{font-size:12px;font-weight:600} .bm-sub{font-size:11px;color:var(--texto-3)}
+    .barra.b-colaborador{background:#C27C0E} .barra.b-empresa{background:var(--vermelho)} .barra.b-outros{background:#8C8C8C}
+    .barra-linha.motivo{grid-template-columns:minmax(140px,1fr) 120px 32px}
+    .aviso-dash{margin:10px 16px 0;padding:6px 10px;background:#FBF4E4;color:var(--ambar);font-size:12px}
+    .qualidade{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--linha-leve);border-bottom:1px solid var(--linha-leve)}
+    .q-item{background:var(--papel);padding:14px 16px}
+    .barra-empilhada{display:flex;height:14px;background:var(--faixa);margin-bottom:8px}
+    .barra-empilhada .b-verde{background:#3C8C62} .barra-empilhada .b-vermelho{background:var(--vermelho)}
+    .tabela-rolagem.sem-limite{max-height:none}
+    table.cruzada{font-size:13px}
+    table.cruzada td,table.cruzada th{padding:7px 12px}
+    table.cruzada td.cruz{font-weight:600;font-variant-numeric:tabular-nums}
+    table.cruzada td.total,table.cruzada tfoot td{font-weight:700;background:var(--faixa)}
+    @media (max-width:900px){.turnover{grid-template-columns:1fr}}
     table.qlp td.auto{color:var(--texto-2);background:#FAFAF8}
     table.qlp td.auto.nome{color:var(--texto)}
     table.qlp td.motivo{white-space:normal;min-width:220px;max-width:320px}
@@ -400,6 +429,8 @@
       </div>
       <div class="titulo-dash">Quadro de ativos <span id="notaDash"></span></div>
       <div class="grade-dash" id="gradeDash"></div>
+      <div class="titulo-dash">Movimentação e retenção <span id="notaMov"></span></div>
+      <div class="grade-dash" id="gradeMov"></div>
     </div>
   </div>
 
@@ -764,7 +795,7 @@
 // QLP - Fagron Services Brazil
 // =====================================================================
 const VERSAO_APP = 9;              // subir sempre que o formato dos dados mudar
-const ROTULO_VERSAO = 'QLP v2.11';
+const ROTULO_VERSAO = 'QLP v2.12';
 const GH_API = 'https://api.github.com';
 const REPO_PADRAO = 'RecrutamentoeSelecao/qlp-fagron-dados';   // repositório privado dos dados
 const ARQUIVO = 'dados.json';
@@ -1565,6 +1596,141 @@ function mostrarEstado() {
   }
 }
 
+// ---------------------------------------------------------------------
+// Indicadores de movimentação e retenção (Painel)
+// ---------------------------------------------------------------------
+const MES_CURTO = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+function dataDesl(c) { return lerDataBR(c.dataDesligamento); }
+function contaNoQuadro(c) { return !(ehDesligado(c) && !c.dataDesligamento); }   // desligado sem data não entra nas contas
+function hcEm(d, fimDoDia) {
+  return ESTADO.colaboradores.filter(c => {
+    if (!contaNoQuadro(c)) return false;
+    const a = lerDataBR(c.dataAdmissao); if (!a || a > d) return false;
+    const x = dataDesl(c);
+    return !x || (fimDoDia ? x > d : x >= d);
+  }).length;
+}
+function serieMensal(qtd) {
+  const h = hoje(), meses = [];
+  for (let i = qtd - 1; i >= 0; i--) {
+    const ini = new Date(h.getFullYear(), h.getMonth() - i, 1);
+    const ultimo = new Date(ini.getFullYear(), ini.getMonth() + 1, 0);
+    const fim = ultimo > h ? h : ultimo;
+    const dentro = d => d && d >= ini && d <= fim;
+    const desl = ESTADO.colaboradores.filter(c => contaNoQuadro(c) && dentro(dataDesl(c))).length;
+    const adm = ESTADO.colaboradores.filter(c => dentro(lerDataBR(c.dataAdmissao))).length;
+    const hcMedio = (hcEm(ini, false) + hcEm(fim, true)) / 2;
+    meses.push({ ini, fim, desl, adm, hcMedio, taxa: hcMedio ? desl / hcMedio * 100 : 0,
+      rotulo: `${MES_CURTO[ini.getMonth()]}/${String(ini.getFullYear()).slice(2)}`, parcial: ultimo > h });
+  }
+  return meses;
+}
+function pct(v, casas = 1) { return `${v.toFixed(casas).replace('.', ',')}%`; }
+function classificarMotivo(m) {
+  const t = semAcento(m);
+  if (!t) return 'sem';
+  if (/PEDIDO|INICIATIVA DO COLABORADOR|INICIATIVA DO ESTAGIARIO|ABANDONO|RESCISAO INDIRETA/.test(t)) return 'colaborador';
+  if (/DISPENSA|DESLIGAMENTO DO APRENDIZ|INICIATIVA DA EMPRESA|TERMINO DO CONTRATO DE EXPERIENCIA/.test(t)) return 'empresa';
+  return 'outros';
+}
+function janela12() { const h = hoje(); return { ini: new Date(h.getFullYear(), h.getMonth() - 11, 1), fim: h }; }
+
+function cartaoTurnover(serie) {
+  const atual = serie[serie.length - 1];
+  const desl12 = serie.reduce((s, m) => s + m.desl, 0), adm12 = serie.reduce((s, m) => s + m.adm, 0);
+  const hc12 = serie.reduce((s, m) => s + m.hcMedio, 0) / serie.length;
+  const taxa12 = hc12 ? desl12 / hc12 * 100 : 0;
+  const max = Math.max(1, ...serie.map(m => m.taxa));
+  return `<div class="section cartao-dash largo">
+    <div class="section-title">Turnover <span class="nota">desligamentos ÷ quadro médio</span></div>
+    <div class="turnover">
+      <div class="to-numeros">
+        <div><div class="stat-label">Mês atual (${atual.rotulo})</div><div class="to-valor">${pct(atual.taxa)}</div>
+          <div class="stat-nota">${atual.desl} desligamento(s) · ${atual.adm} admissão(ões) · quadro médio ${Math.round(atual.hcMedio)}</div></div>
+        <div><div class="stat-label">Últimos 12 meses</div><div class="to-valor">${pct(taxa12)}</div>
+          <div class="stat-nota">${desl12} desligamento(s) · ${adm12} admissão(ões) · quadro médio ${Math.round(hc12)}</div></div>
+      </div>
+      <div class="colunas" role="img" aria-label="Turnover mês a mês">
+        ${serie.map(m => `<div class="coluna" title="${m.rotulo}: ${pct(m.taxa)} — ${m.desl} desligamento(s), quadro médio ${Math.round(m.hcMedio)}${m.parcial ? ' (mês em andamento)' : ''}">
+          <span class="col-valor">${m.desl ? pct(m.taxa) : ''}</span>
+          <span class="col-barra${m.parcial ? ' parcial' : ''}" style="height:${(m.taxa / max * 100).toFixed(1)}%"></span>
+          <span class="col-rotulo">${m.rotulo}</span></div>`).join('')}
+      </div>
+    </div>
+    <div class="section-rodape">Quem saiu antes de o sistema existir não está na base: os meses anteriores à importação aparecem com quadro e desligamentos menores que os reais. O acumulado de 12 meses fica fiel à medida que os desligamentos forem lançados com data. Coluna listrada = mês em andamento.</div>
+  </div>`;
+}
+function cartaoMotivos() {
+  const { ini, fim } = janela12();
+  const desl = ESTADO.colaboradores.filter(c => { const d = dataDesl(c); return d && d >= ini && d <= fim; });
+  const t = desl.length;
+  const grupos = { colaborador: 0, empresa: 0, outros: 0, sem: 0 };
+  desl.forEach(c => grupos[classificarMotivo(c.motivoSaida)]++);
+  const blocos = [['colaborador', 'Iniciativa do colaborador', 'retenção'], ['empresa', 'Iniciativa da empresa', 'assertividade'], ['outros', 'Outros', 'acordo, fim de prazo…']]
+    .map(([k, r, sub]) => `<div class="bloco-motivo m-${k}"><div class="bm-num">${grupos[k]}</div><div class="bm-rot">${r}</div><div class="bm-sub">${t ? Math.round(grupos[k] / t * 100) : 0}% · ${sub}</div></div>`).join('');
+  const porMotivo = agrupar(desl, 'motivoSaida').map(g => ({ ...g, classe: g.vazio ? 'b-cinza' : 'b-' + classificarMotivo(g.rotulo) }));
+  return `<div class="section cartao-dash">
+    <div class="section-title">Desligamentos por motivo <span class="nota">últimos 12 meses · ${t}</span></div>
+    <div class="blocos-motivo">${blocos}</div>
+    ${grupos.sem ? `<div class="aviso-dash">${grupos.sem} desligamento(s) sem motivo informado.</div>` : ''}
+    <div class="barras">${porMotivo.map(g => `<div class="barra-linha motivo">
+        <span class="barra-rotulo" title="${esc(g.rotulo)}">${esc(g.rotulo)}</span>
+        <span class="barra-trilho"><span class="barra ${g.classe}" style="width:${(g.n / Math.max(1, ...porMotivo.map(x => x.n)) * 100).toFixed(1)}%"></span></span>
+        <span class="barra-num">${g.n}</span></div>`).join('') || '<div class="vazio-base">Nenhum desligamento com data nos últimos 12 meses.</div>'}</div>
+  </div>`;
+}
+function cartaoQualidade() {
+  const { ini, fim } = janela12();
+  const admitidos = ESTADO.colaboradores.filter(c => { const a = lerDataBR(c.dataAdmissao); return a && a >= ini && a <= fim; });
+  const precoces = admitidos.filter(c => { const a = lerDataBR(c.dataAdmissao), d = dataDesl(c); return d && diasEntre(a, d) + 1 <= ESTADO.parametros.periodo2; });
+  const clt = ESTADO.colaboradores.filter(ehCLT);
+  const efet = clt.filter(c => semAcento(c.decisao2) === 'EFETIVAR').length;
+  const disp = clt.filter(c => semAcento(c.decisao1) === 'DISPENSAR' || semAcento(c.decisao2) === 'DISPENSAR').length;
+  const prorrog = clt.filter(c => semAcento(c.decisao1) === 'PRORROGAR' && !c.decisao2).length;
+  const decid = efet + disp;
+  return `<div class="section cartao-dash">
+    <div class="section-title">Qualidade da contratação</div>
+    <div class="qualidade">
+      <div class="q-item"><div class="stat-label">Saíram antes de ${ESTADO.parametros.periodo2} dias</div>
+        <div class="to-valor ${precoces.length ? 'vermelho' : ''}">${admitidos.length ? pct(precoces.length / admitidos.length * 100, 0) : '—'}</div>
+        <div class="stat-nota">${precoces.length} de ${admitidos.length} admitido(s) nos últimos 12 meses</div></div>
+      <div class="q-item"><div class="stat-label">Taxa de efetivação</div>
+        <div class="to-valor verde">${decid ? pct(efet / decid * 100, 0) : '—'}</div>
+        <div class="stat-nota">${efet} efetivado(s) · ${disp} dispensado(s)${prorrog ? ` · ${prorrog} prorrogado(s) aguardando a 2ª` : ''}</div></div>
+    </div>
+    <div class="barras">
+      ${decid ? `<div class="barra-empilhada" title="${efet} efetivados, ${disp} dispensados"><span class="b-verde" style="width:${efet / decid * 100}%"></span><span class="b-vermelho" style="width:${disp / decid * 100}%"></span></div>` : ''}
+      <div class="stat-nota">A taxa de efetivação usa as decisões registradas no Controle do Período de Experiência (só CLT).</div>
+    </div>
+  </div>`;
+}
+function cartaoTempoCasa(at) {
+  const faixas = [['Menos de 3 meses', 0, 2], ['3 a 12 meses', 3, 11], ['1 a 3 anos', 12, 35], ['3 a 5 anos', 36, 59], ['Mais de 5 anos', 60, 1e9]];
+  const grupos = faixas.map(([rotulo, a, b]) => ({ rotulo, n: at.filter(c => { const m = mesesDeEmpresa(c); return m !== null && m >= a && m <= b; }).length }));
+  return cartaoDash('Tempo de casa', grupos, at.length);
+}
+function cartaoSetorTurno(at) {
+  const setores = ordenar([...new Set(at.map(c => c.setor || 'Não informado'))]);
+  const turnos = ordenar([...new Set(at.map(c => c.turno || 'Não informado'))]);
+  const n = (s, t) => at.filter(c => (c.setor || 'Não informado') === s && (c.turno || 'Não informado') === t).length;
+  const max = Math.max(1, ...setores.flatMap(s => turnos.map(t => n(s, t))));
+  const cel = v => `<td class="num cruz" style="background:rgba(210,35,42,${v ? (0.08 + v / max * 0.42).toFixed(2) : 0})">${v || '·'}</td>`;
+  return `<div class="section cartao-dash">
+    <div class="section-title">Ativos por setor × turno <span class="nota">${at.length} ativos</span></div>
+    <div class="tabela-rolagem sem-limite"><table class="cruzada">
+      <thead><tr><th>Setor</th>${turnos.map(t => `<th class="num">${esc(t)}</th>`).join('')}<th class="num">Total</th></tr></thead>
+      <tbody>${setores.map(s => `<tr><td>${esc(s)}</td>${turnos.map(t => cel(n(s, t))).join('')}<td class="num total">${at.filter(c => (c.setor || 'Não informado') === s).length}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td>Total</td>${turnos.map(t => `<td class="num total">${at.filter(c => (c.turno || 'Não informado') === t).length}</td>`).join('')}<td class="num total">${at.length}</td></tr></tfoot>
+    </table></div>
+  </div>`;
+}
+function renderizarMovimentacao() {
+  const at = ativosAgora();
+  const semData = ESTADO.colaboradores.filter(c => ehDesligado(c) && !c.dataDesligamento).length;
+  $('notaMov').textContent = semData ? `${semData} desligado(s) sem data ficam fora destas contas — preencha no Histórico` : 'calculado com as datas de admissão e desligamento';
+  $('gradeMov').innerHTML = cartaoTurnover(serieMensal(12)) + cartaoMotivos() + cartaoQualidade() + cartaoTempoCasa(at) + cartaoSetorTurno(at);
+}
+
 // Dashboards do Painel: ativos (status ATIVO ou sem status) agrupados
 function ativosAgora() { return ESTADO.colaboradores.filter(c => ['ATIVO', ''].includes(semAcento(c.status || ''))); }
 function cartaoDash(titulo, grupos, total, classe) {
@@ -1596,6 +1762,7 @@ function renderizarDash() {
     cartaoDash('Ativos por turno', agrupar(at, 'turno', true), t) +
     cartaoDash('Ativos por sexo', sexo, t) +
     cartaoDash('Ativos por tipo de contrato', agrupar(at, 'tipo'), t);
+  renderizarMovimentacao();
 }
 function atualizarPainel() {
   renderizarDash();

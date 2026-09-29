@@ -317,6 +317,7 @@
     table.cruzada td.cruz{font-weight:600;font-variant-numeric:tabular-nums}
     table.cruzada td.total,table.cruzada tfoot td{font-weight:700;background:var(--faixa)}
     @media (max-width:900px){.turnover{grid-template-columns:1fr}}
+    .dica-novo{color:var(--ambar);font-weight:600}
     .explica{padding:10px 16px;font-size:12.5px;line-height:1.5;color:var(--texto-2);border-bottom:1px solid var(--linha-leve);background:#FCFBFA}
     .explica strong{color:var(--texto);font-weight:600}
     .login-wrapper{position:relative;overflow:hidden}
@@ -738,11 +739,16 @@
       </div>
       <div class="campo dois">
         <label for="cSubstituiu">Substituiu (ocupante anterior)</label>
-        <select id="cSubstituiu"></select>
+        <input id="cSubstituiu" list="listaPessoas" autocomplete="off" placeholder="Digite o nome…" oninput="dicaPessoa(this)">
+        <small id="dica_cSubstituiu"></small>
       </div>
       <div class="campo dois">
         <label for="cSubstPor">Substituído por (próximo ocupante)</label>
-        <select id="cSubstPor"></select>
+        <input id="cSubstPor" list="listaPessoas" autocomplete="off" placeholder="Digite o nome…" oninput="dicaPessoa(this)">
+        <small id="dica_cSubstPor"></small>
+      </div>
+      <datalist id="listaPessoas"></datalist>
+      <div class="campo inteiro" style="display:none">
       </div>
 
       <div class="campo inteiro" id="dicaBase"><small>Não achou o item no menu? Peça à administradora para incluí-lo na Base.</small></div>
@@ -806,7 +812,7 @@
 // QLP - Fagron Services Brazil
 // =====================================================================
 const VERSAO_APP = 9;              // subir sempre que o formato dos dados mudar
-const ROTULO_VERSAO = 'QLP v2.13.1';
+const ROTULO_VERSAO = 'QLP v2.14';
 const GH_API = 'https://api.github.com';
 const REPO_PADRAO = 'RecrutamentoeSelecao/qlp-fagron-dados';   // repositório privado dos dados
 const ARQUIVO = 'dados.json';
@@ -2163,14 +2169,16 @@ function renderizarColaboradores() {
   const tbody = document.querySelector('#tabelaColaboradores tbody');
   const fs = $('filtroStatus');
   const escolhido = fs.value;
-  fs.innerHTML = '<option value="">Todos os status</option>' + ordenar(ESTADO.base.status).map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+  const nInc = ESTADO.colaboradores.filter(c => c.incompleto).length;
+  fs.innerHTML = '<option value="">Todos os status</option>' + ordenar(ESTADO.base.status).map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('')
+    + (nInc ? `<option value="__incompleto__">Cadastros a completar (${nInc})</option>` : '');
   fs.value = escolhido;
   const semSexo = ESTADO.colaboradores.filter(c => !c.sexo).length;
   preencherFiltro('filtroSexo', 'Todos os sexos', [...ordenar(ESTADO.base.sexo).map(v => [v, v]), ...(semSexo ? [['__vazio__', `Sexo não informado (${semSexo})`]] : [])]);
   const termo = semAcento($('filtroNome').value.trim());
   const todos = ESTADO.colaboradores;
   const lista = todos
-    .filter(c => !fs.value || semAcento(c.status) === semAcento(fs.value))
+    .filter(c => !fs.value || (fs.value === '__incompleto__' ? c.incompleto : semAcento(c.status) === semAcento(fs.value)))
     .filter(c => { const v = $('filtroSexo').value; return !v || (v === '__vazio__' ? !c.sexo : c.sexo === v); })
     .filter(c => !termo || semAcento([c.matricula, c.nome, c.sexo, c.cargo, c.tipo, c.status, c.gestor, c.setor, c.turno].join(' ')).includes(termo))
     .sort((a, b) => {
@@ -2197,7 +2205,7 @@ function renderizarColaboradores() {
     return `<tr${autoria}${ehDesligado(col) ? ' class="desligado"' : ''}>
       <td class="num fixa">${i + 1}</td>
       <td>${esc(col.matricula) || '—'}</td>
-      <td class="nome">${esc(col.nome)}</td>
+      <td class="nome">${esc(col.nome)}${col.incompleto ? ' <span class="falta">completar cadastro</span>' : ''}</td>
       <td>${esc(col.cargo)}</td>
       <td>${esc(col.tipo) || '—'}</td>
       <td class="data">${esc(col.dataAdmissao)}</td>
@@ -2268,8 +2276,8 @@ function abrirCadastro(id, focarNotas, focarMov) {
   if (!col) { const ativo = ESTADO.base.status.find(v => semAcento(v) === 'ATIVO'); if (ativo) $('cStatus').value = ativo; }
   $('dicaBase').hidden = pode('incluirBase');
   $('cDeslig').value = col && col.dataDesligamento ? paraISO(col.dataDesligamento) : '';
-  montarMenuPessoa('cSubstituiu', col && col.id, col && col.substituiu, true);
-  montarMenuPessoa('cSubstPor', col && col.id, col && col.substituidoPor, false);
+  montarListaPessoas(col && col.id);
+  ['cSubstituiu', 'cSubstPor'].forEach((id, k) => { const p = porId(col && (k ? col.substituidoPor : col.substituiu)); $(id).value = p ? rotuloPessoa(p) : ''; dicaPessoa($(id)); });
   $('eDeslig').textContent = ''; $('cDeslig').classList.remove('invalido');
   mostrarTempo();
   notasEdicao = col ? (col.notas || []).map(n => ({ ...n })) : [];
@@ -2316,8 +2324,21 @@ function salvarCadastro() {
   dados.dataDesligamento = desl ? paraBR(desl) : '';
   if (desl) dados.status = itemStatus('DESLIGADO');                                   // data preenchida → desligado
   else if (anterior && anterior.dataDesligamento && ehDesligado(dados)) dados.status = itemStatus('ATIVO');   // data apagada → volta a ativo
-  const registro = { posicao, matricula, nome, dataAdmissao: paraBR(adm), ...dados, notas: notasEdicao, _por: EU.nome, _em: agoraISO() };
-  const substituiu = $('cSubstituiu').value, substituidoPor = $('cSubstPor').value;
+  const registro = { posicao, matricula, nome, dataAdmissao: paraBR(adm), ...dados, notas: notasEdicao, incompleto: false, _por: EU.nome, _em: agoraISO() };
+  const r1 = acharPessoa($('cSubstituiu').value, editandoId), r2 = acharPessoa($('cSubstPor').value, editandoId);
+  const novos = [r1, r2].filter(r => r && r.novo).map(r => r.novo);
+  if (novos.length && !confirm(`${novos.join(' e ')} ainda não ${novos.length > 1 ? 'estão cadastrados' : 'está cadastrado(a)'}.\n\nCriar ${novos.length > 1 ? 'os pré-cadastros' : 'o pré-cadastro'} na aba Colaboradores? Depois é só abrir e completar matrícula, admissão e o resto.`)) return;
+  const criarPre = (r, anteriorDaVaga) => {
+    if (!r) return '';
+    if (r.id) return r.id;
+    const base = { cargo: dados.cargo, tipo: dados.tipo, gestor: dados.gestor, setor: dados.setor, turno: dados.turno };
+    const pre = { id: novoId('c'), posicao: proximaPosicao(), matricula: '', nome: r.novo, dataAdmissao: '', ...base,
+      status: anteriorDaVaga ? itemStatus('DESLIGADO') : itemStatus('ATIVO'), incompleto: true, notas: [],
+      substituiu: '', substituidoPor: '', _por: EU.nome, _em: agoraISO() };
+    ESTADO.colaboradores.push(pre);
+    return pre.id;
+  };
+  const substituiu = criarPre(r1, true), substituidoPor = criarPre(r2, false);
   let col;
   if (editandoId != null) {
     col = ESTADO.colaboradores.find(c => c.id === editandoId);
@@ -2329,6 +2350,7 @@ function salvarCadastro() {
     mostrarAviso(`${nome} cadastrado(a)`);
   }
   aplicarVinculos(col, substituiu, substituidoPor);
+  if (novos.length) setTimeout(() => mostrarAviso(`Pré-cadastro criado: ${novos.join(' e ')} — complete na aba Colaboradores`), 50);
   $('cNota').value = '';
   $('janelaCadastro').classList.remove('aberta'); editandoId = null;
   alterou(); render();
@@ -2409,6 +2431,27 @@ function tempoDeEmpresa(col) {
   return anos && meses ? `${anos} e ${meses}` : anos || meses;
 }
 function rotuloPessoa(c) { return `${c.nome}${c.matricula ? ` (${c.matricula})` : ''}${c.status ? ` — ${c.status}` : ''}`; }
+function montarListaPessoas(eu) {
+  const outros = ESTADO.colaboradores.filter(c => c.id !== eu).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  $('listaPessoas').innerHTML = outros.map(c => `<option value="${esc(rotuloPessoa(c))}">`).join('');
+}
+// Texto digitado → { id } de alguém cadastrado, { novo: NOME } ou null (vazio)
+function acharPessoa(texto, eu) {
+  const t = String(texto || '').trim(); if (!t) return null;
+  const outros = ESTADO.colaboradores.filter(c => c.id !== eu);
+  const exato = outros.find(c => rotuloPessoa(c) === t);
+  if (exato) return { id: exato.id };
+  const nome = semAcento(t.split(' (')[0].split(' — ')[0].trim());
+  const mesmos = outros.filter(c => semAcento(c.nome) === nome);
+  if (mesmos.length) return { id: (mesmos.find(c => !ehDesligado(c)) || mesmos[0]).id };
+  return { novo: limpaTexto(t) };
+}
+function dicaPessoa(el) {
+  const r = acharPessoa(el.value, editandoId);
+  const d = $('dica_' + el.id);
+  d.className = r && r.novo ? 'dica-novo' : '';
+  d.textContent = !r ? '' : r.novo ? `Não está cadastrado — ao salvar, entra como pré-cadastro na aba Colaboradores para você completar.` : '';
+}
 function montarMenuPessoa(idSel, eu, valor, desligadosPrimeiro) {
   const outros = ESTADO.colaboradores.filter(c => c.id !== eu);
   outros.sort((a, b) =>

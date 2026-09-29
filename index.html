@@ -313,13 +313,13 @@
       <div class="section">
         <div class="section-title">Colaboradores em período de experiência</div>
         <div class="toolbar">
-          <input type="text" id="filtroNome" placeholder="Buscar por nome, cargo, departamento ou gestor" oninput="renderizarColaboradores()">
+          <input type="text" id="filtroNome" placeholder="Buscar por nome, cargo, setor, gestor, turno ou status" oninput="renderizarColaboradores()">
           <span class="contagem" id="contagemColab"></span>
           <button class="btn btn-primary" data-pode="cadastrar" onclick="abrirCadastro()">＋ Novo colaborador</button>
         </div>
         <div class="tabela-rolagem">
           <table id="tabelaColaboradores">
-            <thead><tr><th>Nome</th><th>Cargo</th><th>Departamento</th><th>Gestor</th><th>Admissão</th><th class="num">Dias de casa</th><th>1ª avaliação</th><th>2ª avaliação</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>Nome</th><th>Cargo</th><th>Setor</th><th>Gestor</th><th>Status</th><th>Admissão</th><th class="num">Dias de casa</th><th>1ª avaliação</th><th>2ª avaliação</th><th>Experiência</th><th></th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
@@ -466,8 +466,12 @@
         <div class="erro" id="eCargo"></div>
       </div>
       <div class="campo">
-        <label for="cDepto">Departamento</label>
-        <select id="cDepto" onchange="escolheuNoMenu(this)"></select>
+        <label for="cSetor">Setor</label>
+        <select id="cSetor" onchange="escolheuNoMenu(this)"></select>
+      </div>
+      <div class="campo">
+        <label for="cStatus">Status</label>
+        <select id="cStatus" onchange="escolheuNoMenu(this)"></select>
       </div>
       <div class="campo">
         <label for="cGestor">Gestor</label>
@@ -536,8 +540,8 @@
 // =====================================================================
 // QLP - Fagron Services Brazil
 // =====================================================================
-const VERSAO_APP = 4;              // subir sempre que o formato dos dados mudar
-const ROTULO_VERSAO = 'QLP v2.4';
+const VERSAO_APP = 5;              // subir sempre que o formato dos dados mudar
+const ROTULO_VERSAO = 'QLP v2.5';
 const GH_API = 'https://api.github.com';
 const REPO_PADRAO = 'RecrutamentoeSelecao/qlp-fagron-dados';   // repositório privado dos dados
 const ARQUIVO = 'dados.json';
@@ -565,13 +569,18 @@ const PERMISSOES = [
 
 // Listas da Base. 'campo' é onde o valor fica gravado no colaborador (null = ainda não usado no cadastro).
 const LISTAS = [
-  { k: 'departamentos', rotulo: 'Departamentos',           campo: 'departamento' },
-  { k: 'cargos',        rotulo: 'Cargos',                  campo: 'cargo' },
-  { k: 'gestores',      rotulo: 'Gestores',                campo: 'gestor' },
-  { k: 'turnos',        rotulo: 'Turnos',                  campo: 'turno' },
-  { k: 'tipos',         rotulo: 'Tipos de contratação',    campo: 'tipo' },
-  { k: 'motivos',       rotulo: 'Motivos de desligamento', campo: null },
+  { k: 'cargos',   rotulo: 'Cargos',                campo: 'cargo' },
+  { k: 'gestores', rotulo: 'Gestores',              campo: 'gestor' },
+  { k: 'tipos',    rotulo: 'Tipos de contratação',  campo: 'tipo' },
+  { k: 'status',   rotulo: 'Status',                campo: 'status' },
+  { k: 'setores',  rotulo: 'Setores',               campo: 'setor' },
+  { k: 'turnos',   rotulo: 'Turnos',                campo: 'turno' },
+  { k: 'motivos',  rotulo: 'Motivos da saída',      campo: null },
 ];
+
+// Listas da aba "Listas" da planilha QLP_Produção.xlsx (28/09/2026), em caixa alta e sem repetidos.
+// Entram uma única vez, na primeira entrada de uma administradora nesta versão.
+const SEMENTE_BASE = { id: 'planilha-qlp-producao-2026-09-28', listas: {"cargos": ["ABASTECEDOR DE PRODUCAO II", "ABASTECEDOR DE PRODUCAO III", "ABASTECEDOR DE PRODUCAO IV", "ABASTECEDOR DE PRODUCAO V", "ANALISTA DE PRODUCAO", "ASSISTENTE ADMINISTRATIVO I", "ASSISTENTE ADMINISTRATIVO II", "AUXILIAR DE PRODUCAO B", "ESTAGIÁRIO(A)", "GERENTE DE PRODUCAO", "LIDER PRODUCAO", "MENOR APRENDIZ LOGISTICA", "OPERADOR DE MAQUINA I", "OPERADOR DE MAQUINA II", "OPERADOR DE MAQUINA II - HF", "OPERADOR DE MAQUINA III", "OPERADOR DE MAQUINA III - HF", "OPERADOR DE MAQUINA III - HM", "OPERADOR DE MAQUINA IV", "OPERADOR ESPECIALISTA II", "OPERADOR ESPECIALISTA III", "SUPERVISOR PRODUCAO"], "gestores": ["ARIANE LIMA", "CAROLAYNE SILVA", "ELEN ABADIA", "JADER FREITAS", "JOAO ARAUJO", "MARCELO SILVA", "MARCIANO LIMA", "PAULO SANTOS", "PRISCILA MACEDO", "RODOLFO CARDOSO"], "tipos": ["APRENDIZ", "CLT", "ESTÁGIO"], "status": ["AFASTADO", "ATIVO", "DESLIGADO"], "setores": ["ADMINISTRATIVO", "ALIMENTOS", "CENTRAL DE IMPRESSÃO", "DIVERSOS", "ETIQUETADOS", "LÍQUIDOS"], "turnos": ["1º TURNO", "2º TURNO", "ADM"], "motivos": ["ABANDONO OU TRANCAMENTO DE MATRÍCULA (ESTÁGIO)", "APOSENTADORIA", "CULPA RECÍPROCA (ART. 484 CLT)", "DESLIGAMENTO DO APRENDIZ POR DESEMPENHO INSUFICIENTE/INADAPTAÇÃO", "DESLIGAMENTO DO APRENDIZ POR FALTA DISCIPLINAR GRAVE", "DISPENSA COM JUSTA CAUSA (ART. 482 CLT)", "DISPENSA SEM JUSTA CAUSA (INICIATIVA DA EMPRESA)", "FALECIMENTO DO COLABORADOR", "FORÇA MAIOR / EXTINÇÃO DA EMPRESA OU ESTABELECIMENTO", "PEDIDO DE DEMISSÃO (INICIATIVA DO COLABORADOR)", "RESCISÃO DO CONTRATO DE APRENDIZAGEM A PEDIDO DO APRENDIZ", "RESCISÃO DO ESTÁGIO POR INICIATIVA DA EMPRESA/INSTITUIÇÃO DE ENSINO", "RESCISÃO DO ESTÁGIO POR INICIATIVA DO ESTAGIÁRIO", "RESCISÃO INDIRETA (FALTA GRAVE DO EMPREGADOR - ART. 483 CLT)", "RESCISÃO POR ACORDO ENTRE AS PARTES (ART. 484-A CLT)", "TÉRMINO DO CONTRATO DE APRENDIZAGEM (DECURSO DE PRAZO - LEI 10.097/2000)", "TÉRMINO DO CONTRATO DE ESTÁGIO (CONCLUSÃO DE CURSO/PRAZO - LEI 11.788/2008)", "TÉRMINO DO CONTRATO DE EXPERIÊNCIA (DECURSO DE PRAZO)"]} };
 function baseVazia() { return Object.fromEntries(LISTAS.map(l => [l.k, []])); }
 
 const PARAM_PADRAO = { periodo1: 45, periodo2: 90, gravarSozinho: true, buscarSozinho: true };
@@ -714,6 +723,9 @@ async function montarCofre() {
 }
 function normalizarEstado(e) {
   e = e || {};
+  const eb = { ...(e.base || {}) };
+  if (eb.departamentos && !eb.setores) eb.setores = eb.departamentos;      // v2.4 chamava a lista de Departamentos
+  e = { ...e, base: eb };
   const base = baseVazia();
   LISTAS.forEach(l => {
     const vistos = new Set();
@@ -721,7 +733,11 @@ function normalizarEstado(e) {
   });
   return {
     ...e,                                   // campos que esta versão não conhece passam adiante intactos
-    colaboradores: (e.colaboradores || []).map(c => ({ ...c, id: String(c.id) })),
+    colaboradores: (e.colaboradores || []).map(c => {
+      const x = { ...c, id: String(c.id) };
+      if (x.departamento !== undefined) { if (!x.setor) x.setor = x.departamento; delete x.departamento; }
+      return x;
+    }),
     pessoas: (e.pessoas || []).map(p => ({ ...p, id: String(p.id) })),
     parametros: { ...PARAM_PADRAO, ...(e.parametros || {}) },
     base,
@@ -1086,10 +1102,21 @@ async function fazerLogin() {
   if (pendenteModo()) gravarAgora();
 }
 
+function semearBase() {
+  if (!EU || EU.perfil !== 'admin') return;
+  const feitas = ESTADO.sementes || [];
+  if (feitas.includes(SEMENTE_BASE.id)) return;
+  let n = 0;
+  LISTAS.forEach(l => { n += incluirNaLista(l.k, SEMENTE_BASE.listas[l.k] || []).novos; });
+  ESTADO.sementes = [...feitas, SEMENTE_BASE.id];
+  alterou();
+  mostrarAviso(`Base preenchida com as listas da planilha: ${n} itens`);
+}
 function entrarNoApp() {
   $('telaLogin').style.display = 'none';
   $('appWrapper').classList.add('active');
   $('btnEntrar').disabled = false; $('btnEntrar').textContent = 'Entrar';
+  semearBase();
   render();
   ligarPiloto();
 }
@@ -1280,7 +1307,7 @@ function mostrarEstado() {
   const el = $('estadoSync'); if (!el) return;
   let txt, cls = '';
   const pend = pendenteModo();
-  if (SYNC.estado === 'versao') { txt = 'página desatualizada — aperte Ctrl+Shift+R'; cls = 'erro'; }
+  if (SYNC.estado === 'versao' || versaoRemota > VERSAO_APP) { txt = 'página desatualizada — aperte Ctrl+Shift+R'; cls = 'erro'; }
   else if (SYNC.estado === 'outraBase') { txt = 'a base do repositório foi trocada — saia e entre de novo'; cls = 'erro'; }
   else if (SYNC.estado === 'gravando') txt = 'sincronizando…';
   else if (SYNC.estado === 'erro') { txt = 'não gravou no repositório — ' + SYNC.msg; cls = 'erro'; }
@@ -1332,22 +1359,23 @@ function renderizarColaboradores() {
   const termo = semAcento($('filtroNome').value.trim());
   const todos = ESTADO.colaboradores;
   const lista = todos
-    .filter(c => !termo || semAcento(`${c.nome} ${c.cargo} ${c.departamento} ${c.gestor || ''} ${c.turno || ''} ${c.tipo || ''}`).includes(termo))
+    .filter(c => !termo || semAcento(`${c.nome} ${c.cargo} ${c.setor || ''} ${c.gestor || ''} ${c.turno || ''} ${c.tipo || ''} ${c.status || ''}`).includes(termo))
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
   $('contagemColab').textContent = termo ? `${lista.length} de ${todos.length} colaboradores` : `${todos.length} colaboradores`;
   if (!todos.length) {
-    tbody.innerHTML = `<tr><td colspan="10" class="empty-state"><p>Nenhum colaborador cadastrado.</p>${pode('cadastrar') ? '<button class="btn btn-primary" onclick="abrirCadastro()">＋ Cadastrar o primeiro</button>' : ''}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11" class="empty-state"><p>Nenhum colaborador cadastrado.</p>${pode('cadastrar') ? '<button class="btn btn-primary" onclick="abrirCadastro()">＋ Cadastrar o primeiro</button>' : ''}</td></tr>`;
     return;
   }
-  if (!lista.length) { tbody.innerHTML = '<tr><td colspan="10" class="empty-state"><p>Nenhum resultado para a busca.</p></td></tr>'; return; }
+  if (!lista.length) { tbody.innerHTML = '<tr><td colspan="11" class="empty-state"><p>Nenhum resultado para a busca.</p></td></tr>'; return; }
   tbody.innerHTML = lista.map(col => {
     const s = situacao(col);
     const autoria = col._por ? ` title="Última alteração: ${esc(col._por)} em ${esc(new Date(col._em).toLocaleString('pt-BR'))}"` : '';
     return `<tr${autoria}>
       <td>${esc(col.nome)}</td>
       <td>${esc(col.cargo)}</td>
-      <td>${esc(col.departamento) || '—'}</td>
+      <td>${esc(col.setor) || '—'}</td>
       <td>${esc(col.gestor) || '—'}</td>
+      <td>${esc(col.status) || '—'}</td>
       <td>${esc(col.dataAdmissao)}</td>
       <td class="num">${s && s.dia >= 1 ? s.dia : '—'}</td>
       <td>${s ? fmt(s.venc1) : '—'}</td>
@@ -1624,7 +1652,8 @@ function removerItem(k, v) {
 // ---------------------------------------------------------------------
 const CAMPOS_MENU = [
   { id: 'cCargo',  lista: 'cargos',        campo: 'cargo',        rotulo: 'cargo' },
-  { id: 'cDepto',  lista: 'departamentos', campo: 'departamento', rotulo: 'departamento' },
+  { id: 'cSetor',  lista: 'setores',       campo: 'setor',        rotulo: 'setor' },
+  { id: 'cStatus', lista: 'status',        campo: 'status',       rotulo: 'status' },
   { id: 'cGestor', lista: 'gestores',      campo: 'gestor',       rotulo: 'gestor' },
   { id: 'cTurno',  lista: 'turnos',        campo: 'turno',        rotulo: 'turno' },
   { id: 'cTipo',   lista: 'tipos',         campo: 'tipo',         rotulo: 'tipo de contratação' },
@@ -1664,6 +1693,7 @@ function abrirCadastro(id) {
   $('btnSalvarColab').textContent = col ? 'Salvar alterações' : 'Cadastrar';
   $('cNome').value = col ? col.nome : '';
   CAMPOS_MENU.forEach(cm => montarMenu(cm, col ? (col[cm.campo] || '') : ''));
+  if (!col) { const ativo = ESTADO.base.status.find(v => semAcento(v) === 'ATIVO'); if (ativo) $('cStatus').value = ativo; }
   $('dicaBase').hidden = pode('incluirBase');
   $('cAdm').value = col ? paraISO(col.dataAdmissao) : '';
   limparErros(); preencherSugestoes();
@@ -1677,7 +1707,7 @@ function salvarCadastro() {
   limparErros();
   const lerMenu = id => { const v = $(id).value; return v === NOVO ? '' : v; };
   const nome = limpaTexto($('cNome').value), cargo = lerMenu('cCargo');
-  const depto = lerMenu('cDepto'), gestor = lerMenu('cGestor'), turno = lerMenu('cTurno'), tipo = lerMenu('cTipo'), adm = $('cAdm').value;
+  const setor = lerMenu('cSetor'), status = lerMenu('cStatus'), gestor = lerMenu('cGestor'), turno = lerMenu('cTurno'), tipo = lerMenu('cTipo'), adm = $('cAdm').value;
   let ok = true;
   if (nome.split(' ').length < 2) { marcarErro('Nome', 'Informe nome e sobrenome.'); ok = false; }
   if (!cargo) { marcarErro('Cargo', 'Informe o cargo.'); ok = false; }
@@ -1691,10 +1721,10 @@ function salvarCadastro() {
   const carimbo = { _por: EU.nome, _em: agoraISO() };
   if (editandoId != null) {
     const col = ESTADO.colaboradores.find(c => c.id === editandoId);
-    Object.assign(col, { nome, cargo, departamento: depto, gestor, turno, tipo, dataAdmissao: dataBR, ...carimbo });
+    Object.assign(col, { nome, cargo, setor, status, gestor, turno, tipo, dataAdmissao: dataBR, ...carimbo });
     mostrarAviso('Alterações salvas');
   } else {
-    ESTADO.colaboradores.push({ id: novoId('c'), nome, cargo, departamento: depto, gestor, turno, tipo, dataAdmissao: dataBR, ...carimbo });
+    ESTADO.colaboradores.push({ id: novoId('c'), nome, cargo, setor, status, gestor, turno, tipo, dataAdmissao: dataBR, ...carimbo });
     mostrarAviso(`${nome} cadastrado(a)`);
   }
   fecharCadastro(); alterou(); render();
@@ -1724,11 +1754,11 @@ function hojeArquivo() { const d = hoje(); return `${d.getFullYear()}-${String(d
 function exportarCSV() {
   if (!pode('dados')) return;
   const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  let csv = '\uFEFFNOME;CARGO;DEPARTAMENTO;GESTOR;TURNO;TIPO DE CONTRATAÇÃO;ADMISSÃO;DIAS DE CASA;1ª AVALIAÇÃO;2ª AVALIAÇÃO;STATUS\n';
+  let csv = '\uFEFFNOME;CARGO;SETOR;STATUS;GESTOR;TURNO;TIPO DE CONTRATAÇÃO;ADMISSÃO;DIAS DE CASA;1ª AVALIAÇÃO;2ª AVALIAÇÃO;EXPERIÊNCIA\n';
   [...ESTADO.colaboradores].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).forEach(col => {
     const s = situacao(col);
     const st = s ? { futura: 'A admitir', p1: '1º período', p2: '2º período', fim: 'Efetivado' }[s.fase] : '';
-    csv += [q(col.nome), q(col.cargo), q(col.departamento), q(col.gestor), q(col.turno), q(col.tipo), q(col.dataAdmissao),
+    csv += [q(col.nome), q(col.cargo), q(col.setor), q(col.status), q(col.gestor), q(col.turno), q(col.tipo), q(col.dataAdmissao),
       s && s.dia >= 1 ? s.dia : '', q(s ? fmt(s.venc1) : ''), q(s ? fmt(s.venc2) : ''), q(st)].join(';') + '\n';
   });
   baixar(`qlp-${hojeArquivo()}.csv`, csv, 'text/csv;charset=utf-8;');
@@ -1767,7 +1797,7 @@ function restaurar() {
           if (EXEMPLOS_ANTIGOS.includes(`${nome}|${c.dataAdmissao}`)) return;
           if (ESTADO.colaboradores.some(x => semAcento(x.nome) === semAcento(nome) && x.dataAdmissao === c.dataAdmissao)) { repetidos++; return; }
           ESTADO.colaboradores.push({
-            id: novoId('c'), nome, cargo: limpaTexto(c.cargo), departamento: limpaTexto(c.departamento),
+            id: novoId('c'), nome, cargo: limpaTexto(c.cargo), setor: limpaTexto(c.setor || c.departamento), status: limpaTexto(c.status),
             gestor: limpaTexto(c.gestor), turno: limpaTexto(c.turno), tipo: limpaTexto(c.tipo), dataAdmissao: c.dataAdmissao, _por: EU.nome, _em: agoraISO(),
           });
           novos++;

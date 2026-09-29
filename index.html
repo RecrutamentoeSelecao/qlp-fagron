@@ -245,6 +245,16 @@
     .sem-notas{font-size:13px;color:var(--texto-3)}
     .autoria-janela{margin-right:auto;font-size:12px;color:var(--texto-3);align-self:center}
     @media (max-width:760px){.janela-corpo.tres{grid-template-columns:1fr 1fr}}
+    table.qlp td.auto{color:var(--texto-2);background:#FAFAF8}
+    table.qlp td.auto.nome{color:var(--texto)}
+    table.qlp td.motivo{white-space:normal;min-width:220px;max-width:320px}
+    tr.desligado-hist td.nome{text-decoration:line-through;text-decoration-color:var(--linha)}
+    .falta{background:#FBF4E4;color:var(--ambar);font-weight:600;font-size:11px;padding:1px 6px;text-transform:uppercase;letter-spacing:.04em}
+    .pend{display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;background:var(--ambar);color:#fff;font-weight:700;font-size:12px;cursor:help;vertical-align:middle}
+    .link-pessoa{background:none;border:0;padding:0;font:inherit;color:var(--texto);text-decoration:underline;text-decoration-color:var(--linha);cursor:pointer;text-align:left}
+    .link-pessoa:hover{text-decoration-color:var(--vermelho)}
+    .subtitulo-janela{font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--texto-2);border-top:1px solid var(--linha-leve);padding-top:14px;margin-top:2px}
+    .valor-calc{padding:8px 10px;background:var(--faixa);border:1px solid var(--linha-leve);font-size:14px;font-weight:600;min-height:38px}
     @media (max-width:700px){.form-linha,.form-senha,.linha-entrada,.form-sync{grid-template-columns:1fr}}
 
   </style>
@@ -321,6 +331,7 @@
   <div class="nav" role="tablist">
     <div class="nav-item active" tabindex="0" onclick="mudarAba('painel', this)">Painel</div>
     <div class="nav-item" tabindex="0" onclick="mudarAba('colaboradores', this)">Colaboradores<span class="qtd" id="navQtdColab">0</span></div>
+    <div class="nav-item" tabindex="0" onclick="mudarAba('historico', this)">Histórico</div>
     <div class="nav-item" tabindex="0" onclick="mudarAba('relatorio', this)">Relatório</div>
     <div class="nav-item" tabindex="0" data-pode="base" onclick="mudarAba('base', this)">Base</div>
     <div class="nav-item" tabindex="0" onclick="mudarAba('parametros', this)">Parâmetros</div>
@@ -381,6 +392,37 @@
           </table>
         </div>
         <div class="section-rodape">Vencimentos: <span class="venc laranja">laranja</span> vence em 8 a 15 dias · <span class="venc vermelho">vermelho</span> vence em até 7 dias. Contagem conforme CLT: o dia da admissão é o dia 1. Clique no título de uma coluna para ordenar.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTÓRICO -->
+  <div class="content" id="abaHistorico">
+    <div class="content-wrapper largo">
+      <div class="section">
+        <div class="section-title">Histórico de substituições por posição</div>
+        <div class="intro">Cada colaborador aparece aqui automaticamente, na ordem das posições. As colunas em cinza vêm da aba Colaboradores. Preencha a data de desligamento, o motivo e quem substituiu quem em <strong>Editar</strong> — é o mesmo cadastro da aba Colaboradores, então tudo que muda num lado muda no outro, observações incluídas.</div>
+        <div class="toolbar">
+          <input type="text" id="buscaHist" placeholder="Buscar por nome, matrícula, cargo, motivo ou substituto" oninput="renderizarHistorico()">
+          <select id="filtroHist" onchange="renderizarHistorico()" aria-label="Filtrar">
+            <option value="">Todos</option>
+            <option value="desligados">Só desligados</option>
+            <option value="vigentes">Só quem está na casa</option>
+            <option value="pendentes">Com pendência</option>
+          </select>
+          <span class="contagem" id="contagemHist"></span>
+        </div>
+        <div class="tabela-rolagem">
+          <table id="tabelaHistorico" class="qlp">
+            <thead><tr>
+              <th class="num">Nº</th><th>Matrícula</th><th>Nome do colaborador</th><th>Cargo</th><th>Tipo</th><th>Admissão</th>
+              <th>Desligamento</th><th>Tempo de empresa</th><th>Motivo da saída</th>
+              <th>Substituiu (ocupante anterior)</th><th>Substituído por (próximo ocupante)</th><th>Obs.</th><th></th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="section-rodape">Tempo de empresa em meses completos, até o desligamento ou até hoje — atualiza sozinho a cada dia. Com menos de um mês aparece “–”. <span class="falta">informar</span> marca o que falta preencher.</div>
       </div>
     </div>
   </div>
@@ -525,7 +567,7 @@
       </div>
       <div class="campo">
         <label for="cAdm">Data de admissão <span class="obrig">*</span></label>
-        <input id="cAdm" type="date" oninput="mostrarVencimentos()">
+        <input id="cAdm" type="date" oninput="mostrarVencimentos(); mostrarTempo()">
         <div class="erro" id="eAdm"></div>
       </div>
       <div class="campo inteiro">
@@ -559,6 +601,30 @@
         <select id="cTurno" onchange="escolheuNoMenu(this)"></select>
       </div>
       <div class="campo inteiro vencimentos" id="cVenc"></div>
+      <div class="campo inteiro subtitulo-janela" id="blocoMov">Desligamento e substituição</div>
+      <div class="campo">
+        <label for="cDeslig">Data de desligamento</label>
+        <input id="cDeslig" type="date" oninput="mostrarTempo()">
+        <div class="erro" id="eDeslig"></div>
+      </div>
+      <div class="campo dois">
+        <label for="cMotivo">Motivo da saída</label>
+        <select id="cMotivo" onchange="escolheuNoMenu(this)"></select>
+      </div>
+      <div class="campo">
+        <label>Tempo de empresa</label>
+        <div class="valor-calc" id="cTempo">–</div>
+        <small id="dicaDeslig"></small>
+      </div>
+      <div class="campo dois">
+        <label for="cSubstituiu">Substituiu (ocupante anterior)</label>
+        <select id="cSubstituiu"></select>
+      </div>
+      <div class="campo dois">
+        <label for="cSubstPor">Substituído por (próximo ocupante)</label>
+        <select id="cSubstPor"></select>
+      </div>
+
       <div class="campo inteiro" id="dicaBase"><small>Não achou o item no menu? Peça à administradora para incluí-lo na Base.</small></div>
 
       <div class="campo inteiro notas">
@@ -619,8 +685,8 @@
 // =====================================================================
 // QLP - Fagron Services Brazil
 // =====================================================================
-const VERSAO_APP = 6;              // subir sempre que o formato dos dados mudar
-const ROTULO_VERSAO = 'QLP v2.6';
+const VERSAO_APP = 7;              // subir sempre que o formato dos dados mudar
+const ROTULO_VERSAO = 'QLP v2.7';
 const GH_API = 'https://api.github.com';
 const REPO_PADRAO = 'RecrutamentoeSelecao/qlp-fagron-dados';   // repositório privado dos dados
 const ARQUIVO = 'dados.json';
@@ -654,7 +720,7 @@ const LISTAS = [
   { k: 'status',   rotulo: 'Status',                campo: 'status' },
   { k: 'setores',  rotulo: 'Setores',               campo: 'setor' },
   { k: 'turnos',   rotulo: 'Turnos',                campo: 'turno' },
-  { k: 'motivos',  rotulo: 'Motivos da saída',      campo: null },
+  { k: 'motivos',  rotulo: 'Motivos da saída',      campo: 'motivoSaida' },
 ];
 
 // Listas da aba "Listas" da planilha QLP_Produção.xlsx (28/09/2026), em caixa alta e sem repetidos.
@@ -1377,6 +1443,7 @@ function render() {
   $('navQtdColab').textContent = ESTADO.colaboradores.length;
   atualizarPainel();
   renderizarColaboradores();
+  renderizarHistorico();
   renderizarRelatorio();
   renderizarParametros();
   renderizarPessoas();
@@ -1701,6 +1768,7 @@ function removerItem(k, v) {
 // Cadastro de colaboradores
 // ---------------------------------------------------------------------
 const CAMPOS_MENU = [
+  { id: 'cMotivo', lista: 'motivos',       campo: 'motivoSaida',  rotulo: 'motivo da saída' },
   { id: 'cCargo',  lista: 'cargos',        campo: 'cargo',        rotulo: 'cargo' },
   { id: 'cSetor',  lista: 'setores',       campo: 'setor',        rotulo: 'setor' },
   { id: 'cStatus', lista: 'status',        campo: 'status',       rotulo: 'status' },
@@ -1735,8 +1803,9 @@ function preencherSugestoes() {}
 function excluirColaborador(id) {
   if (!pode('excluir')) return;
   const col = ESTADO.colaboradores.find(c => c.id === id); if (!col) return;
-  if (!confirm(`Excluir ${col.nome} do QLP?\n\nUse excluir só para cadastro feito por engano. Desligamento terá registro próprio.`)) return;
+  if (!confirm(`Excluir ${col.nome} do QLP?\n\nUse excluir só para cadastro feito por engano. Para desligar, preencha a data de desligamento em Editar — assim a pessoa fica no histórico.`)) return;
   ESTADO.colaboradores = ESTADO.colaboradores.filter(c => c.id !== id);
+  ESTADO.colaboradores.forEach(c => { if (c.substituiu === id) c.substituiu = ''; if (c.substituidoPor === id) c.substituidoPor = ''; });
   alterou(); render();
   mostrarAviso(`${col.nome} excluído(a)`);
 }
@@ -1863,7 +1932,7 @@ function apagarNota(i) {
   renderizarNotas();
 }
 
-function abrirCadastro(id, focarNotas) {
+function abrirCadastro(id, focarNotas, focarMov) {
   if (!pode('cadastrar')) return;
   editandoId = id ?? null;
   const col = editandoId != null ? ESTADO.colaboradores.find(c => c.id === editandoId) : null;
@@ -1876,12 +1945,18 @@ function abrirCadastro(id, focarNotas) {
   CAMPOS_MENU.forEach(cm => montarMenu(cm, col ? (col[cm.campo] || '') : ''));
   if (!col) { const ativo = ESTADO.base.status.find(v => semAcento(v) === 'ATIVO'); if (ativo) $('cStatus').value = ativo; }
   $('dicaBase').hidden = pode('incluirBase');
+  $('cDeslig').value = col && col.dataDesligamento ? paraISO(col.dataDesligamento) : '';
+  montarMenuPessoa('cSubstituiu', col && col.id, col && col.substituiu, true);
+  montarMenuPessoa('cSubstPor', col && col.id, col && col.substituidoPor, false);
+  $('eDeslig').textContent = ''; $('cDeslig').classList.remove('invalido');
+  mostrarTempo();
   notasEdicao = col ? (col.notas || []).map(n => ({ ...n })) : [];
   $('cNota').value = '';
   $('autoriaJanela').textContent = col && col._por ? `Última alteração: ${col._por}, ${new Date(col._em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}` : '';
   renderizarNotas(); mostrarVencimentos(); limparErros();
   $('janelaCadastro').classList.add('aberta');
-  (focarNotas ? $('cNota') : col ? $('cNome') : $('cMatricula')).focus();
+  (focarNotas ? $('cNota') : focarMov ? $('cDeslig') : col ? $('cNome') : $('cMatricula')).focus();
+  if (focarMov) $('blocoMov').scrollIntoView({ block: 'start' });
 }
 function fecharCadastro() {
   if ($('cNota').value.trim() && !confirm('Há uma observação escrita que não foi adicionada. Fechar mesmo assim?')) return;
@@ -1898,7 +1973,7 @@ function salvarCadastro() {
   const nome = limpaTexto($('cNome').value), adm = $('cAdm').value;
   const dados = {
     cargo: lerMenu('cCargo'), tipo: lerMenu('cTipo'), status: lerMenu('cStatus'),
-    gestor: lerMenu('cGestor'), setor: lerMenu('cSetor'), turno: lerMenu('cTurno'),
+    gestor: lerMenu('cGestor'), setor: lerMenu('cSetor'), turno: lerMenu('cTurno'), motivoSaida: lerMenu('cMotivo'),
   };
   let ok = true;
   if (!(posicao >= 1)) { marcarErro('Posicao', 'Informe um número a partir de 1.'); ok = false; }
@@ -1911,19 +1986,32 @@ function salvarCadastro() {
   if (!dados.cargo) { marcarErro('Cargo', 'Escolha o cargo.'); ok = false; }
   if (!adm) { marcarErro('Adm', 'Informe a data de admissão.'); ok = false; }
   else if (!dataValida(adm)) { marcarErro('Adm', 'Data inválida.'); ok = false; }
+  const desl = $('cDeslig').value;
+  $('eDeslig').textContent = ''; $('cDeslig').classList.remove('invalido');
+  if (desl && !dataValida(desl)) { $('eDeslig').textContent = 'Data inválida.'; $('cDeslig').classList.add('invalido'); ok = false; }
+  else if (desl && adm && dataValida(adm) && desl < adm) { $('eDeslig').textContent = 'Anterior à admissão.'; $('cDeslig').classList.add('invalido'); ok = false; }
   if (!ok) return;
+  const anterior = editandoId != null ? ESTADO.colaboradores.find(c => c.id === editandoId) : null;
+  dados.dataDesligamento = desl ? paraBR(desl) : '';
+  if (desl) dados.status = itemStatus('DESLIGADO');                                   // data preenchida → desligado
+  else if (anterior && anterior.dataDesligamento && ehDesligado(dados)) dados.status = itemStatus('ATIVO');   // data apagada → volta a ativo
   if (!ehDesligado(dados)) {
     const ocupante = ESTADO.colaboradores.find(c => c.id !== editandoId && +c.posicao === posicao && !ehDesligado(c));
     if (ocupante && !confirm(`A posição ${posicao} já está com ${ocupante.nome} (${ocupante.status || 'sem status'}). Salvar assim mesmo?`)) return;
   }
   const registro = { posicao, matricula, nome, dataAdmissao: paraBR(adm), ...dados, notas: notasEdicao, _por: EU.nome, _em: agoraISO() };
+  const substituiu = $('cSubstituiu').value, substituidoPor = $('cSubstPor').value;
+  let col;
   if (editandoId != null) {
-    Object.assign(ESTADO.colaboradores.find(c => c.id === editandoId), registro);
-    mostrarAviso('Alterações salvas');
+    col = ESTADO.colaboradores.find(c => c.id === editandoId);
+    Object.assign(col, registro);
+    mostrarAviso(anterior && !anterior.dataDesligamento && dados.dataDesligamento ? `${nome} desligado(a) em ${dados.dataDesligamento}` : 'Alterações salvas');
   } else {
-    ESTADO.colaboradores.push({ id: novoId('c'), ...registro });
+    col = { id: novoId('c'), ...registro, substituiu: '', substituidoPor: '' };
+    ESTADO.colaboradores.push(col);
     mostrarAviso(`${nome} cadastrado(a) na posição ${posicao}`);
   }
+  aplicarVinculos(col, substituiu, substituidoPor);
   $('cNota').value = '';
   $('janelaCadastro').classList.remove('aberta'); editandoId = null;
   alterou(); render();
@@ -1978,6 +2066,125 @@ function aplicarImportacao(lista) {
 }
 
 // ---------------------------------------------------------------------
+// Histórico de movimentações (aba Histórico de Substituições da planilha)
+// ---------------------------------------------------------------------
+function porId(id) { return id ? ESTADO.colaboradores.find(c => c.id === id) : null; }
+function itemStatus(nome) {                       // o item da Base que corresponde a ATIVO / DESLIGADO
+  let v = ESTADO.base.status.find(x => semAcento(x) === nome);
+  if (!v) { v = nome; ESTADO.base.status.push(v); }
+  return v;
+}
+// Meses completos entre admissão e desligamento (ou hoje), como o DATEDIF(...;"m") da planilha
+function mesesDeEmpresa(col) {
+  const adm = lerDataBR(col.dataAdmissao); if (!adm) return null;
+  let fim;
+  if (col.dataDesligamento) fim = lerDataBR(col.dataDesligamento);
+  else if (ehDesligado(col)) return null;              // desligado sem data: não dá para calcular
+  else fim = hoje();
+  if (!fim || fim < adm) return null;
+  return (fim.getFullYear() - adm.getFullYear()) * 12 + (fim.getMonth() - adm.getMonth()) - (fim.getDate() < adm.getDate() ? 1 : 0);
+}
+function tempoDeEmpresa(col) {
+  const m = mesesDeEmpresa(col);
+  if (m === null || m < 1) return '–';
+  const a = Math.floor(m / 12), r = m % 12;
+  const anos = a ? `${a} ${a === 1 ? 'ano' : 'anos'}` : '', meses = r ? `${r} ${r === 1 ? 'mês' : 'meses'}` : '';
+  return anos && meses ? `${anos} e ${meses}` : anos || meses;
+}
+function rotuloPessoa(c) { return `Nº ${c.posicao || '—'} · ${c.nome}${c.status ? ` — ${c.status}` : ''}`; }
+function montarMenuPessoa(idSel, eu, valor, desligadosPrimeiro) {
+  const outros = ESTADO.colaboradores.filter(c => c.id !== eu);
+  const minhaPos = eu ? +((porId(eu) || {}).posicao) : +$('cPosicao').value;
+  outros.sort((a, b) =>
+    ((+b.posicao === minhaPos) - (+a.posicao === minhaPos))
+    || (desligadosPrimeiro ? ehDesligado(b) - ehDesligado(a) : ehDesligado(a) - ehDesligado(b))
+    || a.nome.localeCompare(b.nome, 'pt-BR'));
+  $(idSel).innerHTML = '<option value="">—</option>' + outros.map(c => `<option value="${esc(c.id)}">${esc(rotuloPessoa(c))}</option>`).join('');
+  $(idSel).value = valor && outros.some(c => c.id === valor) ? valor : '';
+}
+function mostrarTempo() {
+  const adm = $('cAdm').value, desl = $('cDeslig').value;
+  const t = tempoDeEmpresa({ dataAdmissao: dataValida(adm) ? paraBR(adm) : '', dataDesligamento: dataValida(desl) ? paraBR(desl) : '', status: $('cStatus').value });
+  $('cTempo').textContent = t;
+  $('dicaDeslig').textContent = desl ? 'Ao salvar, o status passa para DESLIGADO.' : '';
+}
+// Liga A → B nos dois sentidos, desfazendo ligações antigas de quem estava no meio
+function ligarSubstituicao(anteriorId, proximoId) {
+  const carimbar = c => { if (c) { c._por = EU.nome; c._em = agoraISO(); } };
+  const ant = porId(anteriorId), prox = porId(proximoId);
+  if (ant && ant.substituidoPor && ant.substituidoPor !== proximoId) { const x = porId(ant.substituidoPor); if (x && x.substituiu === ant.id) { x.substituiu = ''; carimbar(x); } }
+  if (prox && prox.substituiu && prox.substituiu !== anteriorId) { const x = porId(prox.substituiu); if (x && x.substituidoPor === prox.id) { x.substituidoPor = ''; carimbar(x); } }
+  if (ant) { ant.substituidoPor = proximoId || ''; carimbar(ant); }
+  if (prox) { prox.substituiu = anteriorId || ''; carimbar(prox); }
+}
+function aplicarVinculos(col, substituiu, substituidoPor) {
+  if ((col.substituiu || '') !== substituiu) {
+    const antigo = porId(col.substituiu);
+    if (antigo && antigo.substituidoPor === col.id) { antigo.substituidoPor = ''; antigo._por = EU.nome; antigo._em = agoraISO(); }
+    col.substituiu = '';
+    if (substituiu) ligarSubstituicao(substituiu, col.id);
+  }
+  if ((col.substituidoPor || '') !== substituidoPor) {
+    const antigo = porId(col.substituidoPor);
+    if (antigo && antigo.substituiu === col.id) { antigo.substituiu = ''; antigo._por = EU.nome; antigo._em = agoraISO(); }
+    col.substituidoPor = '';
+    if (substituidoPor) ligarSubstituicao(col.id, substituidoPor);
+  }
+}
+function nomeLigado(id) {
+  const c = porId(id);
+  return c ? `<button class="link-pessoa" onclick="abrirCadastro('${esc(c.id)}')" title="${esc(rotuloPessoa(c))}">${esc(c.nome)}</button>` : '—';
+}
+
+function renderizarHistorico() {
+  const tbody = document.querySelector('#tabelaHistorico tbody');
+  const f = $('filtroHist').value;
+  const termo = semAcento($('buscaHist').value.trim());
+  const todos = ESTADO.colaboradores;
+  const lista = todos
+    .filter(c => !f || (f === 'desligados' ? ehDesligado(c) : f === 'pendentes' ? pendenciasHist(c).length : !ehDesligado(c)))
+    .filter(c => !termo || semAcento([c.posicao, c.matricula, c.nome, c.cargo, c.motivoSaida, (porId(c.substituiu) || {}).nome, (porId(c.substituidoPor) || {}).nome].join(' ')).includes(termo))
+    .sort((a, b) => (+a.posicao || 1e9) - (+b.posicao || 1e9) || valorOrdem(a, 'adm') - valorOrdem(b, 'adm'));
+  const nDesl = todos.filter(ehDesligado).length, nPend = todos.filter(c => pendenciasHist(c).length).length;
+  $('contagemHist').textContent = `${lista.length} de ${todos.length} · ${nDesl} desligado(s)${nPend ? ` · ${nPend} com pendência` : ''}`;
+  if (!lista.length) { tbody.innerHTML = `<tr><td colspan="13" class="empty-state">${todos.length ? 'Nenhum registro para este filtro.' : 'Nenhum colaborador cadastrado.'}</td></tr>`; return; }
+  tbody.innerHTML = lista.map(c => {
+    const pend = pendenciasHist(c);
+    const nNotas = (c.notas || []).length;
+    return `<tr${ehDesligado(c) ? ' class="desligado-hist"' : ''}>
+      <td class="num">${esc(c.posicao) || '—'}</td>
+      <td class="auto">${esc(c.matricula) || '—'}</td>
+      <td class="auto nome">${esc(c.nome)}</td>
+      <td class="auto">${esc(c.cargo)}</td>
+      <td class="auto">${esc(c.tipo) || '—'}</td>
+      <td class="auto data">${esc(c.dataAdmissao)}</td>
+      <td class="data">${c.dataDesligamento ? esc(c.dataDesligamento) : (ehDesligado(c) ? '<span class="falta">informar</span>' : '—')}</td>
+      <td class="auto">${tempoDeEmpresa(c)}</td>
+      <td class="motivo">${c.motivoSaida ? esc(c.motivoSaida) : (c.dataDesligamento ? '<span class="falta">informar</span>' : '—')}</td>
+      <td>${nomeLigado(c.substituiu)}</td>
+      <td>${nomeLigado(c.substituidoPor)}</td>
+      <td class="centro">${pode('cadastrar')
+        ? `<button class="notinha${nNotas ? ' tem' : ''}" onclick="abrirCadastro('${esc(c.id)}', true)" aria-label="Observações de ${esc(c.nome)}" title="${nNotas ? esc(c.notas[c.notas.length - 1].texto) : 'Sem observações'}">📝${nNotas ? ` ${nNotas}` : ''}</button>`
+        : (nNotas ? `📝 ${nNotas}` : '')}</td>
+      <td class="acoes">${pode('cadastrar') ? `<button class="btn btn-secondary" onclick="abrirCadastro('${esc(c.id)}', false, true)" aria-label="Movimentar ${esc(c.nome)}">Editar</button>` : ''}${pend.length ? ` <span class="pend" title="${esc(pend.join(' · '))}">!</span>` : ''}</td>
+    </tr>`;
+  }).join('');
+}
+function pendenciasHist(c) {
+  const p = [];
+  if (ehDesligado(c) && !c.dataDesligamento) p.push('falta a data de desligamento');
+  if (c.dataDesligamento && !c.motivoSaida) p.push('falta o motivo da saída');
+  return p;
+}
+
+// Virada do dia: tempo de empresa e vencimentos se atualizam sozinhos
+let diaDesenhado = new Date().toDateString();
+setInterval(() => {
+  const d = new Date().toDateString();
+  if (d !== diaDesenhado && EU && !janelaAberta()) { diaDesenhado = d; render(); }
+}, 60000);
+
+// ---------------------------------------------------------------------
 // Dados: exportar, cópia de segurança, restaurar, apagar
 // ---------------------------------------------------------------------
 function baixar(nome, texto, tipo) {
@@ -1992,12 +2199,12 @@ function hojeArquivo() { const d = hoje(); return `${d.getFullYear()}-${String(d
 function exportarCSV() {
   if (!pode('dados')) return;
   const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  let csv = '\uFEFFNº POSIÇÃO;MATRÍCULA;NOME COMPLETO;CARGO;TIPO DE CONTRATAÇÃO;DATA DE ADMISSÃO;VENCIMENTO 1ª EXPERIÊNCIA;VENCIMENTO 2ª EXPERIÊNCIA;STATUS;GESTOR IMEDIATO;SETOR;TURNO;OBSERVAÇÕES\n';
+  let csv = '\uFEFFNº POSIÇÃO;MATRÍCULA;NOME COMPLETO;CARGO;TIPO DE CONTRATAÇÃO;DATA DE ADMISSÃO;VENCIMENTO 1ª EXPERIÊNCIA;VENCIMENTO 2ª EXPERIÊNCIA;STATUS;GESTOR IMEDIATO;SETOR;TURNO;DATA DE DESLIGAMENTO;TEMPO DE EMPRESA;MOTIVO DA SAÍDA;SUBSTITUIU;SUBSTITUÍDO POR;OBSERVAÇÕES\n';
   [...ESTADO.colaboradores].sort((a, b) => (+a.posicao || 1e9) - (+b.posicao || 1e9)).forEach(col => {
     const s = situacao(col);
     const obs = (col.notas || []).map(n => `${new Date(n.em).toLocaleDateString('pt-BR')} ${n.por}: ${n.texto}`).join(' | ');
     csv += [col.posicao || '', q(col.matricula), q(col.nome), q(col.cargo), q(col.tipo), q(col.dataAdmissao),
-      q(s ? fmt(s.venc1) : ''), q(s ? fmt(s.venc2) : ''), q(col.status), q(col.gestor), q(col.setor), q(col.turno), q(obs)].join(';') + '\n';
+      q(s ? fmt(s.venc1) : ''), q(s ? fmt(s.venc2) : ''), q(col.status), q(col.gestor), q(col.setor), q(col.turno), q(col.dataDesligamento), q(tempoDeEmpresa(col)), q(col.motivoSaida), q((porId(col.substituiu) || {}).nome), q((porId(col.substituidoPor) || {}).nome), q(obs)].join(';') + '\n';
   });
   baixar(`qlp-${hojeArquivo()}.csv`, csv, 'text/csv;charset=utf-8;');
 }

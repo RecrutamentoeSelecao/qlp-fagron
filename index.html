@@ -133,6 +133,7 @@
     .campo label .obrig{color:var(--vermelho)}
     .campo input{width:100%;padding:8px 10px;border:1px solid var(--campo-borda);background:var(--campo);font-size:14px;color:var(--texto)}
     .campo input:focus{outline:2px solid var(--vermelho);outline-offset:-1px;background:#fff}
+    .campo select.invalido{border-color:var(--vermelho-escuro);background:#FBEDEC}
     .campo input.invalido{border-color:var(--vermelho-escuro);background:#FBEDEC}
     .campo .erro{color:var(--vermelho-escuro);font-size:12px;margin-top:4px}
     .janela-rodape{padding:12px 18px;border-top:1px solid var(--linha);display:flex;justify-content:flex-end;gap:10px;background:var(--faixa)}
@@ -185,6 +186,25 @@
     .janela-rodape .esquerda{margin-right:auto}
     .campo small{display:block;font-size:12px;color:var(--texto-2);margin-top:4px}
     input:disabled,select:disabled{opacity:.6;cursor:not-allowed}
+    .intro-base{background:var(--faixa);border:1px solid var(--linha);padding:14px 18px;font-size:14px;color:var(--texto-2);margin-bottom:24px}
+    .intro-base strong{color:var(--texto)}
+    .grade-base{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:24px;align-items:start}
+    .cartao-base{margin-bottom:0}
+    .lista-base{max-height:320px;overflow-y:auto}
+    .item-base{display:flex;align-items:center;gap:8px;padding:7px 12px 7px 16px;border-bottom:1px solid var(--linha-leve);font-size:14px}
+    .item-base .nome-item{flex:1;min-width:0;overflow-wrap:anywhere}
+    .item-base .uso{color:var(--texto-3);font-size:12px;min-width:18px;text-align:right}
+    .item-base.fora{background:#FBF4E4}
+    .item-base.fora small{color:var(--ambar);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-left:6px}
+    .icone{background:none;border:0;cursor:pointer;color:var(--texto-3);font-size:14px;padding:2px 5px}
+    .icone:hover{color:var(--vermelho-escuro)}
+    .btn.mini{padding:2px 8px;font-size:12px}
+    .vazio-base{padding:14px 16px;color:var(--texto-3);font-size:13px}
+    .add-base{display:flex;gap:8px;padding:12px 16px 6px;border-top:1px solid var(--linha)}
+    .add-base input{flex:1;min-width:0;padding:7px 10px;border:1px solid var(--campo-borda);background:var(--campo);font-size:14px;font-family:inherit}
+    .add-base input:focus{outline:2px solid var(--vermelho);outline-offset:-1px;background:#fff}
+    .link.colar{margin:4px 16px 12px}
+    .campo textarea{width:100%;padding:8px 10px;border:1px solid var(--campo-borda);background:var(--campo);font-size:14px;font-family:inherit;resize:vertical}
     @media (max-width:700px){.form-linha,.form-senha,.linha-entrada,.form-sync{grid-template-columns:1fr}}
 
   </style>
@@ -262,6 +282,7 @@
     <div class="nav-item active" tabindex="0" onclick="mudarAba('painel', this)">Painel</div>
     <div class="nav-item" tabindex="0" onclick="mudarAba('colaboradores', this)">Colaboradores<span class="qtd" id="navQtdColab">0</span></div>
     <div class="nav-item" tabindex="0" onclick="mudarAba('relatorio', this)">Relatório</div>
+    <div class="nav-item" tabindex="0" data-pode="base" onclick="mudarAba('base', this)">Base</div>
     <div class="nav-item" tabindex="0" onclick="mudarAba('parametros', this)">Parâmetros</div>
   </div>
 
@@ -313,11 +334,19 @@
         <div class="section-title">Relatório de experiência <button class="btn" data-pode="dados" onclick="exportarCSV()">Exportar CSV</button></div>
         <div class="tabela-rolagem">
           <table id="tabelaRelatorio">
-            <thead><tr><th>Nome</th><th>Cargo</th><th>Gestor</th><th>Admissão</th><th id="thP1">1ª avaliação</th><th id="thP2">2ª avaliação</th><th>Status</th></tr></thead>
+            <thead><tr><th>Nome</th><th>Cargo</th><th>Gestor</th><th>Turno</th><th>Tipo</th><th>Admissão</th><th id="thP1">1ª avaliação</th><th id="thP2">2ª avaliação</th><th>Status</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- BASE -->
+  <div class="content" id="abaBase">
+    <div class="content-wrapper">
+      <div class="intro-base"><strong>Esta é a base do sistema.</strong> Os menus do cadastro de colaboradores leem daqui. Renomear um item corrige junto todos os colaboradores que o usavam — e renomear para um nome que já existe une os dois, que é como se padroniza grafia. Valores usados em cadastros mas ausentes da lista aparecem como <em>fora da lista</em>, com um botão para incluir.</div>
+      <div class="grade-base" id="gradeBase"></div>
     </div>
   </div>
 
@@ -433,17 +462,26 @@
       </div>
       <div class="campo">
         <label for="cCargo">Cargo <span class="obrig">*</span></label>
-        <input id="cCargo" list="lCargos" autocomplete="off">
+        <select id="cCargo" onchange="escolheuNoMenu(this)"></select>
         <div class="erro" id="eCargo"></div>
       </div>
       <div class="campo">
         <label for="cDepto">Departamento</label>
-        <input id="cDepto" list="lDeptos" autocomplete="off">
+        <select id="cDepto" onchange="escolheuNoMenu(this)"></select>
       </div>
       <div class="campo">
         <label for="cGestor">Gestor</label>
-        <input id="cGestor" list="lGestores" autocomplete="off">
+        <select id="cGestor" onchange="escolheuNoMenu(this)"></select>
       </div>
+      <div class="campo">
+        <label for="cTurno">Turno</label>
+        <select id="cTurno" onchange="escolheuNoMenu(this)"></select>
+      </div>
+      <div class="campo">
+        <label for="cTipo">Tipo de contratação</label>
+        <select id="cTipo" onchange="escolheuNoMenu(this)"></select>
+      </div>
+      <div class="campo inteiro" id="dicaBase"><small>Não achou o item no menu? Peça à administradora para incluí-lo na Base.</small></div>
       <div class="campo">
         <label for="cAdm">Data de admissão <span class="obrig">*</span></label>
         <input id="cAdm" type="date">
@@ -474,15 +512,32 @@
     </div>
   </div>
 </div>
-<datalist id="lCargos"></datalist><datalist id="lDeptos"></datalist><datalist id="lGestores"></datalist>
+<div class="janela-fundo" id="janelaColar" onclick="if(event.target===this)fecharColar()">
+  <div class="janela" role="dialog" aria-modal="true" aria-labelledby="colarTitulo">
+    <div class="janela-topo" id="colarTitulo">Colar vários</div>
+    <div class="janela-corpo">
+      <div class="campo inteiro">
+        <label for="colarTexto">Cole uma coluna do Excel — um item por linha</label>
+        <textarea id="colarTexto" rows="12"></textarea>
+        <small>Itens repetidos ou que já estão na lista ficam de fora. Tudo entra em caixa alta.</small>
+        <input type="hidden" id="colarLista">
+      </div>
+    </div>
+    <div class="janela-rodape">
+      <button class="btn btn-secondary" onclick="fecharColar()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarColar()">Incluir na lista</button>
+    </div>
+  </div>
+</div>
+
 <div class="aviso" id="aviso" role="status"></div>
 
 <script>
 // =====================================================================
 // QLP - Fagron Services Brazil
 // =====================================================================
-const VERSAO_APP = 3;              // subir sempre que o formato dos dados mudar
-const ROTULO_VERSAO = 'QLP v2.3';
+const VERSAO_APP = 4;              // subir sempre que o formato dos dados mudar
+const ROTULO_VERSAO = 'QLP v2.4';
 const GH_API = 'https://api.github.com';
 const REPO_PADRAO = 'RecrutamentoeSelecao/qlp-fagron-dados';   // repositório privado dos dados
 const ARQUIVO = 'dados.json';
@@ -503,9 +558,21 @@ const PERMISSOES = [
   { k: 'excluir',    rotulo: 'Excluir colaborador',                admin: true,  equipe: false },
   { k: 'parametros', rotulo: 'Editar parâmetros',                  admin: true,  equipe: false },
   { k: 'base',       rotulo: 'Editar base',                        admin: true,  equipe: false },
+  { k: 'incluirBase', rotulo: 'Incluir item novo na base ao lançar colaborador', admin: true, equipe: false },
   { k: 'usuarios',   rotulo: 'Gerenciar usuários',                 admin: true,  equipe: false },
   { k: 'dados',      rotulo: 'Exportar CSV e cópia de segurança',  admin: true,  equipe: false },
 ];
+
+// Listas da Base. 'campo' é onde o valor fica gravado no colaborador (null = ainda não usado no cadastro).
+const LISTAS = [
+  { k: 'departamentos', rotulo: 'Departamentos',           campo: 'departamento' },
+  { k: 'cargos',        rotulo: 'Cargos',                  campo: 'cargo' },
+  { k: 'gestores',      rotulo: 'Gestores',                campo: 'gestor' },
+  { k: 'turnos',        rotulo: 'Turnos',                  campo: 'turno' },
+  { k: 'tipos',         rotulo: 'Tipos de contratação',    campo: 'tipo' },
+  { k: 'motivos',       rotulo: 'Motivos de desligamento', campo: null },
+];
+function baseVazia() { return Object.fromEntries(LISTAS.map(l => [l.k, []])); }
 
 const PARAM_PADRAO = { periodo1: 45, periodo2: 90, gravarSozinho: true, buscarSozinho: true };
 
@@ -519,7 +586,7 @@ let CHAVE = null;       // chave AES dos dados, só em memória
 let EU = null;          // { id, nome, perfil }
 let ID_BASE = null;
 let CHAVES = [];        // embrulhos da chave, um por pessoa ativa
-let ESTADO = { colaboradores: [], pessoas: [], parametros: { ...PARAM_PADRAO } };
+let ESTADO = { colaboradores: [], pessoas: [], parametros: { ...PARAM_PADRAO }, base: baseVazia() };
 let ENTRADA = null;
 let SYNC = { estado: '', msg: '' };
 let versaoRemota = 0;
@@ -647,10 +714,17 @@ async function montarCofre() {
 }
 function normalizarEstado(e) {
   e = e || {};
+  const base = baseVazia();
+  LISTAS.forEach(l => {
+    const vistos = new Set();
+    base[l.k] = ((e.base && e.base[l.k]) || []).map(limpaTexto).filter(v => v && !vistos.has(semAcento(v)) && vistos.add(semAcento(v)));
+  });
   return {
+    ...e,                                   // campos que esta versão não conhece passam adiante intactos
     colaboradores: (e.colaboradores || []).map(c => ({ ...c, id: String(c.id) })),
     pessoas: (e.pessoas || []).map(p => ({ ...p, id: String(p.id) })),
     parametros: { ...PARAM_PADRAO, ...(e.parametros || {}) },
+    base,
   };
 }
 async function gravarLocal() { if (!CHAVE) return; gravarJSON(L_COFRE, await montarCofre()); }
@@ -687,6 +761,23 @@ function fundirObjeto(b, m, d) {
   if (sm === sd || sd === sb) return m;
   if (sm === sb) return d;
   return m;
+}
+function fundirConjunto(b, m, d) {
+  const S = a => new Set((a || []).map(semAcento));
+  const B = S(b), M = S(m), D = S(d);
+  const tirados = new Set([...B].filter(x => !M.has(x) || !D.has(x)));   // quem tirou, tirou de propósito
+  const out = [], vistos = new Set();
+  [...(m || []), ...(d || [])].forEach(v => {
+    const k = semAcento(v);
+    if (vistos.has(k) || tirados.has(k)) return;
+    vistos.add(k); out.push(v);
+  });
+  return out;
+}
+function fundirBase(b, m, d) {
+  const r = {};
+  LISTAS.forEach(l => { r[l.k] = fundirConjunto(b && b[l.k], m && m[l.k], d && d[l.k]); });
+  return r;
 }
 function coerenciaChaves() {
   const ativos = new Map(ESTADO.pessoas.filter(p => p.ativo).map(p => [p.id, p]));
@@ -770,11 +861,13 @@ async function puxar() {
     return { novidade: true, conflitos: 0 };
   }
   const baseCofre = anterior && anterior.cofre && anterior.cofre.idBase === ID_BASE ? anterior.cofre : null;
-  const base = baseCofre ? normalizarEstado(await decifrar(baseCofre)) : { colaboradores: [], pessoas: [], parametros: undefined };
+  const base = baseCofre ? normalizarEstado(await decifrar(baseCofre)) : { colaboradores: [], pessoas: [], parametros: undefined, base: baseVazia() };
   const fc = fundirLista(base.colaboradores, ESTADO.colaboradores, deles.colaboradores);
   const fp = fundirLista(base.pessoas, ESTADO.pessoas, deles.pessoas);
   const fk = fundirLista(baseCofre ? baseCofre.chaves : [], CHAVES, r.cofre.chaves);
   ESTADO = {
+    ...deles, ...ESTADO,
+    base: fundirBase(base.base, ESTADO.base, deles.base),
     colaboradores: fc.lista, pessoas: fp.lista,
     parametros: { ...PARAM_PADRAO, ...fundirObjeto(base.parametros, ESTADO.parametros, deles.parametros) },
   };
@@ -1179,6 +1272,7 @@ function render() {
   renderizarRelatorio();
   renderizarParametros();
   renderizarPessoas();
+  renderizarBase();
   mostrarEstado();
 }
 
@@ -1238,7 +1332,7 @@ function renderizarColaboradores() {
   const termo = semAcento($('filtroNome').value.trim());
   const todos = ESTADO.colaboradores;
   const lista = todos
-    .filter(c => !termo || semAcento(`${c.nome} ${c.cargo} ${c.departamento} ${c.gestor || ''}`).includes(termo))
+    .filter(c => !termo || semAcento(`${c.nome} ${c.cargo} ${c.departamento} ${c.gestor || ''} ${c.turno || ''} ${c.tipo || ''}`).includes(termo))
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
   $('contagemColab').textContent = termo ? `${lista.length} de ${todos.length} colaboradores` : `${todos.length} colaboradores`;
   if (!todos.length) {
@@ -1274,9 +1368,9 @@ function renderizarRelatorio() {
   $('thP2').textContent = `2ª avaliação (${ESTADO.parametros.periodo2}d)`;
   tbody.innerHTML = lista.length ? lista.map(col => {
     const s = situacao(col);
-    return `<tr><td>${esc(col.nome)}</td><td>${esc(col.cargo)}</td><td>${esc(col.gestor) || '—'}</td><td>${esc(col.dataAdmissao)}</td>
+    return `<tr><td>${esc(col.nome)}</td><td>${esc(col.cargo)}</td><td>${esc(col.gestor) || '—'}</td><td>${esc(col.turno) || '—'}</td><td>${esc(col.tipo) || '—'}</td><td>${esc(col.dataAdmissao)}</td>
       <td>${s ? fmt(s.venc1) : '—'}</td><td>${s ? fmt(s.venc2) : '—'}</td><td>${selo(s)}</td></tr>`;
-  }).join('') : '<tr><td colspan="7" class="empty-state">Nenhum colaborador cadastrado.</td></tr>';
+  }).join('') : '<tr><td colspan="9" class="empty-state">Nenhum colaborador cadastrado.</td></tr>';
 }
 
 function renderizarParametros() {
@@ -1424,15 +1518,141 @@ async function trocarMinhaSenha() {
 }
 
 // ---------------------------------------------------------------------
+// Base: listas que alimentam os menus
+// ---------------------------------------------------------------------
+function usoNaBase(l) {
+  const uso = new Map();
+  if (!l.campo) return uso;
+  ESTADO.colaboradores.forEach(c => { const v = c[l.campo]; if (v) uso.set(semAcento(v), (uso.get(semAcento(v)) || 0) + 1); });
+  return uso;
+}
+function renderizarBase() {
+  if (!pode('base')) return;
+  const foco = document.activeElement && document.activeElement.id && document.activeElement.id.startsWith('add_') ? document.activeElement.id : null;
+  $('gradeBase').innerHTML = LISTAS.map(l => {
+    const itens = ordenar(ESTADO.base[l.k]);
+    const uso = usoNaBase(l);
+    const naLista = new Set(itens.map(semAcento));
+    const fora = l.campo ? ordenar([...new Set(ESTADO.colaboradores.map(c => c[l.campo]).filter(v => v && !naLista.has(semAcento(v))))]) : [];
+    return `<div class="section cartao-base">
+      <div class="section-title">${l.rotulo} <span class="nota">${itens.length}</span></div>
+      <div class="lista-base">
+        ${fora.map(v => `<div class="item-base fora"><span class="nome-item">${esc(v)} <small>fora da lista</small></span>
+          <span class="uso">${uso.get(semAcento(v)) || ''}</span>
+          <button class="btn mini" data-v="${esc(v)}" onclick="incluirFora('${l.k}', this.dataset.v)" aria-label="Incluir ${esc(v)}">Incluir</button></div>`).join('')}
+        ${itens.length ? itens.map(v => `<div class="item-base"><span class="nome-item">${esc(v)}</span>
+          <span class="uso" title="colaboradores que usam">${uso.get(semAcento(v)) || ''}</span>
+          <button class="icone" title="Renomear" aria-label="Renomear ${esc(v)}" data-v="${esc(v)}" onclick="renomearItem('${l.k}', this.dataset.v)">✎</button>
+          <button class="icone" title="Remover" aria-label="Remover ${esc(v)}" data-v="${esc(v)}" onclick="removerItem('${l.k}', this.dataset.v)">✕</button></div>`).join('')
+          : (fora.length ? '' : '<div class="vazio-base">Lista vazia</div>')}
+      </div>
+      <div class="add-base">
+        <input id="add_${l.k}" placeholder="Novo item…" onkeydown="if(event.key==='Enter')adicionarItem('${l.k}')">
+        <button class="btn" onclick="adicionarItem('${l.k}')">Adicionar</button>
+      </div>
+      <button class="link colar" onclick="colarVarios('${l.k}')">Colar vários (um por linha)</button>
+    </div>`;
+  }).join('');
+  if (foco && $(foco)) $(foco).focus();
+}
+function incluirNaLista(k, valores) {
+  const lista = ESTADO.base[k]; let novos = 0, repetidos = 0;
+  valores.map(limpaTexto).filter(Boolean).forEach(v => {
+    if (lista.some(x => semAcento(x) === semAcento(v))) { repetidos++; return; }
+    lista.push(v); novos++;
+  });
+  return { novos, repetidos };
+}
+function adicionarItem(k) {
+  if (!pode('base')) return;
+  const v = limpaTexto($('add_' + k).value);
+  if (!v) return;
+  const r = incluirNaLista(k, [v]);
+  if (!r.novos) { mostrarAviso(`${v} já está na lista`); return; }
+  alterou(); render();
+  mostrarAviso(`${v} incluído`);
+  $('add_' + k).focus();
+}
+function incluirFora(k, v) { if (!pode('base')) return; incluirNaLista(k, [v]); alterou(); render(); mostrarAviso(`${v} incluído na lista`); }
+function colarVarios(k) {
+  if (!pode('base')) return;
+  $('colarLista').value = k;
+  $('colarTitulo').textContent = 'Colar vários — ' + LISTAS.find(l => l.k === k).rotulo;
+  $('colarTexto').value = '';
+  $('janelaColar').classList.add('aberta');
+  $('colarTexto').focus();
+}
+function fecharColar() { $('janelaColar').classList.remove('aberta'); }
+function confirmarColar() {
+  const k = $('colarLista').value;
+  const r = incluirNaLista(k, $('colarTexto').value.split(/[\r\n\t;]+/));
+  fecharColar();
+  if (r.novos) { alterou(); render(); }
+  mostrarAviso(`${r.novos} incluído(s)${r.repetidos ? `, ${r.repetidos} já existia(m) ou repetido(s)` : ''}`);
+}
+function renomearItem(k, antigo) {
+  if (!pode('base')) return;
+  const l = LISTAS.find(x => x.k === k);
+  const novo = limpaTexto(prompt(`Renomear "${antigo}" para:`, antigo));
+  if (!novo || novo === antigo) return;
+  const existente = ESTADO.base[k].find(x => x !== antigo && semAcento(x) === semAcento(novo));
+  if (existente && !confirm(`"${existente}" já existe. Unir os dois? Quem usa "${antigo}" passa a usar "${existente}".`)) return;
+  const destino = existente || novo;
+  ESTADO.base[k] = ESTADO.base[k].filter(x => x !== antigo);
+  if (!existente) ESTADO.base[k].push(destino);
+  let n = 0;
+  if (l.campo) ESTADO.colaboradores.forEach(c => {
+    if (c[l.campo] && semAcento(c[l.campo]) === semAcento(antigo)) { c[l.campo] = destino; c._por = EU.nome; c._em = agoraISO(); n++; }
+  });
+  alterou(); render();
+  mostrarAviso(`Renomeado${n ? ` — ${n} colaborador(es) atualizado(s)` : ''}`);
+}
+function removerItem(k, v) {
+  if (!pode('base')) return;
+  const l = LISTAS.find(x => x.k === k);
+  const n = l.campo ? ESTADO.colaboradores.filter(c => c[l.campo] && semAcento(c[l.campo]) === semAcento(v)).length : 0;
+  if (n) { alert(`"${v}" é usado por ${n} colaborador(es). Renomeie para outro item (os dois se unem) ou troque nos cadastros antes de remover.`); return; }
+  if (!confirm(`Remover "${v}" da lista?`)) return;
+  ESTADO.base[k] = ESTADO.base[k].filter(x => x !== v);
+  alterou(); render();
+  mostrarAviso(`${v} removido`);
+}
+
+
+// ---------------------------------------------------------------------
 // Cadastro de colaboradores
 // ---------------------------------------------------------------------
-function preencherSugestoes() {
-  const unicos = campo => [...new Set(ESTADO.colaboradores.map(c => c[campo]).filter(Boolean))]
-    .sort((a, b) => a.localeCompare(b, 'pt-BR')).map(v => `<option value="${esc(v)}">`).join('');
-  $('lCargos').innerHTML = unicos('cargo');
-  $('lDeptos').innerHTML = unicos('departamento');
-  $('lGestores').innerHTML = unicos('gestor');
+const CAMPOS_MENU = [
+  { id: 'cCargo',  lista: 'cargos',        campo: 'cargo',        rotulo: 'cargo' },
+  { id: 'cDepto',  lista: 'departamentos', campo: 'departamento', rotulo: 'departamento' },
+  { id: 'cGestor', lista: 'gestores',      campo: 'gestor',       rotulo: 'gestor' },
+  { id: 'cTurno',  lista: 'turnos',        campo: 'turno',        rotulo: 'turno' },
+  { id: 'cTipo',   lista: 'tipos',         campo: 'tipo',         rotulo: 'tipo de contratação' },
+];
+const NOVO = '__novo__';
+function ordenar(a) { return [...a].sort((x, y) => x.localeCompare(y, 'pt-BR')); }
+function montarMenu(cm, valor) {
+  const itens = ordenar(ESTADO.base[cm.lista]);
+  const fora = valor && !itens.some(v => semAcento(v) === semAcento(valor));
+  $(cm.id).innerHTML = '<option value="">—</option>'
+    + (fora ? `<option value="${esc(valor)}">${esc(valor)} (fora da lista)</option>` : '')
+    + itens.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('')
+    + (pode('incluirBase') ? `<option value="${NOVO}">＋ cadastrar novo</option>` : '');
+  const existente = itens.find(v => semAcento(v) === semAcento(valor));
+  $(cm.id).value = existente || valor || '';
+  $(cm.id).dataset.anterior = $(cm.id).value;
 }
+function escolheuNoMenu(el) {
+  const cm = CAMPOS_MENU.find(x => x.id === el.id);
+  if (el.value !== NOVO) { el.dataset.anterior = el.value; return; }
+  const v = limpaTexto(prompt(`Novo ${cm.rotulo}:`));
+  if (!v) { el.value = el.dataset.anterior || ''; return; }
+  const existente = ESTADO.base[cm.lista].find(x => semAcento(x) === semAcento(v));
+  if (!existente) { ESTADO.base[cm.lista].push(v); alterou(); }
+  montarMenu(cm, existente || v);
+  if (!existente) mostrarAviso(`${v} incluído na Base`);
+}
+function preencherSugestoes() {}
 function limparErros() { ['Nome', 'Cargo', 'Adm'].forEach(k => { $('e' + k).textContent = ''; $('c' + k).classList.remove('invalido'); }); }
 function marcarErro(k, msg) { $('e' + k).textContent = msg; $('c' + k).classList.add('invalido'); }
 
@@ -1443,9 +1663,8 @@ function abrirCadastro(id) {
   $('janelaTitulo').textContent = col ? 'Editar colaborador' : 'Novo colaborador';
   $('btnSalvarColab').textContent = col ? 'Salvar alterações' : 'Cadastrar';
   $('cNome').value = col ? col.nome : '';
-  $('cCargo').value = col ? col.cargo : '';
-  $('cDepto').value = col ? (col.departamento || '') : '';
-  $('cGestor').value = col ? (col.gestor || '') : '';
+  CAMPOS_MENU.forEach(cm => montarMenu(cm, col ? (col[cm.campo] || '') : ''));
+  $('dicaBase').hidden = pode('incluirBase');
   $('cAdm').value = col ? paraISO(col.dataAdmissao) : '';
   limparErros(); preencherSugestoes();
   $('janelaCadastro').classList.add('aberta');
@@ -1456,8 +1675,9 @@ function fecharCadastro() { $('janelaCadastro').classList.remove('aberta'); edit
 function salvarCadastro() {
   if (!pode('cadastrar')) return;
   limparErros();
-  const nome = limpaTexto($('cNome').value), cargo = limpaTexto($('cCargo').value);
-  const depto = limpaTexto($('cDepto').value), gestor = limpaTexto($('cGestor').value), adm = $('cAdm').value;
+  const lerMenu = id => { const v = $(id).value; return v === NOVO ? '' : v; };
+  const nome = limpaTexto($('cNome').value), cargo = lerMenu('cCargo');
+  const depto = lerMenu('cDepto'), gestor = lerMenu('cGestor'), turno = lerMenu('cTurno'), tipo = lerMenu('cTipo'), adm = $('cAdm').value;
   let ok = true;
   if (nome.split(' ').length < 2) { marcarErro('Nome', 'Informe nome e sobrenome.'); ok = false; }
   if (!cargo) { marcarErro('Cargo', 'Informe o cargo.'); ok = false; }
@@ -1471,10 +1691,10 @@ function salvarCadastro() {
   const carimbo = { _por: EU.nome, _em: agoraISO() };
   if (editandoId != null) {
     const col = ESTADO.colaboradores.find(c => c.id === editandoId);
-    Object.assign(col, { nome, cargo, departamento: depto, gestor, dataAdmissao: dataBR, ...carimbo });
+    Object.assign(col, { nome, cargo, departamento: depto, gestor, turno, tipo, dataAdmissao: dataBR, ...carimbo });
     mostrarAviso('Alterações salvas');
   } else {
-    ESTADO.colaboradores.push({ id: novoId('c'), nome, cargo, departamento: depto, gestor, dataAdmissao: dataBR, ...carimbo });
+    ESTADO.colaboradores.push({ id: novoId('c'), nome, cargo, departamento: depto, gestor, turno, tipo, dataAdmissao: dataBR, ...carimbo });
     mostrarAviso(`${nome} cadastrado(a)`);
   }
   fecharCadastro(); alterou(); render();
@@ -1504,11 +1724,11 @@ function hojeArquivo() { const d = hoje(); return `${d.getFullYear()}-${String(d
 function exportarCSV() {
   if (!pode('dados')) return;
   const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  let csv = '\uFEFFNOME;CARGO;DEPARTAMENTO;GESTOR;ADMISSÃO;DIAS DE CASA;1ª AVALIAÇÃO;2ª AVALIAÇÃO;STATUS\n';
+  let csv = '\uFEFFNOME;CARGO;DEPARTAMENTO;GESTOR;TURNO;TIPO DE CONTRATAÇÃO;ADMISSÃO;DIAS DE CASA;1ª AVALIAÇÃO;2ª AVALIAÇÃO;STATUS\n';
   [...ESTADO.colaboradores].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).forEach(col => {
     const s = situacao(col);
     const st = s ? { futura: 'A admitir', p1: '1º período', p2: '2º período', fim: 'Efetivado' }[s.fase] : '';
-    csv += [q(col.nome), q(col.cargo), q(col.departamento), q(col.gestor), q(col.dataAdmissao),
+    csv += [q(col.nome), q(col.cargo), q(col.departamento), q(col.gestor), q(col.turno), q(col.tipo), q(col.dataAdmissao),
       s && s.dia >= 1 ? s.dia : '', q(s ? fmt(s.venc1) : ''), q(s ? fmt(s.venc2) : ''), q(st)].join(';') + '\n';
   });
   baixar(`qlp-${hojeArquivo()}.csv`, csv, 'text/csv;charset=utf-8;');
@@ -1548,7 +1768,7 @@ function restaurar() {
           if (ESTADO.colaboradores.some(x => semAcento(x.nome) === semAcento(nome) && x.dataAdmissao === c.dataAdmissao)) { repetidos++; return; }
           ESTADO.colaboradores.push({
             id: novoId('c'), nome, cargo: limpaTexto(c.cargo), departamento: limpaTexto(c.departamento),
-            gestor: limpaTexto(c.gestor), dataAdmissao: c.dataAdmissao, _por: EU.nome, _em: agoraISO(),
+            gestor: limpaTexto(c.gestor), turno: limpaTexto(c.turno), tipo: limpaTexto(c.tipo), dataAdmissao: c.dataAdmissao, _por: EU.nome, _em: agoraISO(),
           });
           novos++;
         });
@@ -1592,6 +1812,7 @@ document.addEventListener('keydown', e => {
   if (e.target.classList && e.target.classList.contains('nav-item') && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.target.click(); return; }
   const cad = $('janelaCadastro').classList.contains('aberta');
   const pes = $('janelaPessoa').classList.contains('aberta');
+  if ($('janelaColar').classList.contains('aberta')) { if (e.key === 'Escape') fecharColar(); return; }
   if (!cad && !pes) return;
   if (e.key === 'Escape') { cad ? fecharCadastro() : fecharPessoa(); }
   if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); cad ? salvarCadastro() : salvarPessoa(); }

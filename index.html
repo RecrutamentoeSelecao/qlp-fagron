@@ -246,7 +246,7 @@
     .nota-texto{font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
     .sem-notas{font-size:13px;color:var(--texto-3)}
     .autoria-janela{margin-right:auto;font-size:12px;color:var(--texto-3);align-self:center}
-    @media (max-width:760px){.janela-corpo.tres{grid-template-columns:1fr 1fr}}
+    @media (max-width:760px){.janela-corpo.tres{grid-template-columns:1fr 1fr}.janela-corpo.tres .campo.tres-col{grid-column:1 / -1}}
     th.ordh{cursor:pointer;user-select:none}
     th.ordh:hover,th.ordh.ativo{color:var(--texto)}
     th.ordh[data-seta]:not([data-seta=""])::after{content:" " attr(data-seta);font-size:9px}
@@ -264,6 +264,11 @@
     .sel-decisao.dc-verde,.decisao.dc-verde{background:#EEF6F1;border-color:#BFD9CB;color:var(--verde)}
     .decisao{display:inline-block;padding:2px 8px;border:1px solid;font-size:11px;font-weight:600;text-transform:uppercase}
     td.decisao-cel.pendente{background:#FBEDEC}
+    .janela-corpo.tres .campo.tres-col{grid-column:span 3}
+    .sel-sexo{padding:3px 6px;border:1px solid var(--linha-leve);background:transparent;font-size:12.5px;font-family:inherit;cursor:pointer;color:var(--texto)}
+    .sel-sexo:hover{border-color:var(--linha)}
+    .sel-sexo.vazio{background:#FBF4E4;border-color:#E6D3A8;color:var(--ambar);font-weight:600;font-size:11px;text-transform:uppercase}
+    .sel-sexo:focus{outline:2px solid var(--vermelho);outline-offset:-1px}
     table.qlp td.auto{color:var(--texto-2);background:#FAFAF8}
     table.qlp td.auto.nome{color:var(--texto)}
     table.qlp td.motivo{white-space:normal;min-width:220px;max-width:320px}
@@ -385,6 +390,7 @@
         <div class="toolbar">
           <input type="text" id="filtroNome" placeholder="Buscar por nome, matrícula, cargo, gestor, setor ou turno" oninput="renderizarColaboradores()">
           <select id="filtroStatus" onchange="renderizarColaboradores()" aria-label="Filtrar por status"></select>
+          <select id="filtroSexo" onchange="renderizarColaboradores()" aria-label="Filtrar por sexo"></select>
           <span class="contagem" id="contagemColab"></span>
           <button class="btn" data-pode="dados" onclick="importarColaboradores()">Importar planilha</button>
           <button class="btn btn-primary" data-pode="cadastrar" onclick="abrirCadastro()">＋ Novo colaborador</button>
@@ -395,6 +401,7 @@
               <th class="ord num fixa" data-ord="posicao" title="Voltar à ordem original">Nº</th>
               <th class="ord" data-ord="matricula">Matrícula</th>
               <th class="ord" data-ord="nome">Nome completo</th>
+              <th class="ord" data-ord="sexo">Sexo</th>
               <th class="ord" data-ord="cargo">Cargo</th>
               <th class="ord" data-ord="tipo">Tipo</th>
               <th class="ord" data-ord="adm">Admissão</th>
@@ -616,10 +623,14 @@
         <input id="cAdm" type="date" oninput="mostrarVencimentos(); mostrarTempo()">
         <div class="erro" id="eAdm"></div>
       </div>
-      <div class="campo inteiro">
+      <div class="campo tres-col">
         <label for="cNome">Nome completo do colaborador <span class="obrig">*</span></label>
         <input id="cNome" autocomplete="off">
         <div class="erro" id="eNome"></div>
+      </div>
+      <div class="campo">
+        <label for="cSexo">Sexo</label>
+        <select id="cSexo" onchange="escolheuNoMenu(this)"></select>
       </div>
       <div class="campo dois">
         <label for="cCargo">Cargo <span class="obrig">*</span></label>
@@ -731,8 +742,8 @@
 // =====================================================================
 // QLP - Fagron Services Brazil
 // =====================================================================
-const VERSAO_APP = 8;              // subir sempre que o formato dos dados mudar
-const ROTULO_VERSAO = 'QLP v2.9.1';
+const VERSAO_APP = 9;              // subir sempre que o formato dos dados mudar
+const ROTULO_VERSAO = 'QLP v2.10';
 const GH_API = 'https://api.github.com';
 const REPO_PADRAO = 'RecrutamentoeSelecao/qlp-fagron-dados';   // repositório privado dos dados
 const ARQUIVO = 'dados.json';
@@ -764,6 +775,7 @@ const LISTAS = [
   { k: 'gestores', rotulo: 'Gestores',              campo: 'gestor' },
   { k: 'tipos',    rotulo: 'Tipos de contratação',  campo: 'tipo' },
   { k: 'status',   rotulo: 'Status',                campo: 'status' },
+  { k: 'sexo',     rotulo: 'Sexo',                  campo: 'sexo' },
   { k: 'setores',  rotulo: 'Setores',               campo: 'setor' },
   { k: 'turnos',   rotulo: 'Turnos',                campo: 'turno' },
   { k: 'motivos',  rotulo: 'Motivos da saída',      campo: 'motivoSaida' },
@@ -1302,11 +1314,12 @@ async function fazerLogin() {
   if (pendenteModo()) gravarAgora();
 }
 
+const SEMENTE_SEXO = { id: 'sexo-2026-09-29', listas: { sexo: ['FEMININO', 'MASCULINO'] } };
 const SEMENTE_DECISOES = { id: 'decisoes-experiencia-2026-09-29', listas: { decisao1: ['PRORROGAR', 'DISPENSAR'], decisao2: ['EFETIVAR', 'DISPENSAR'] } };
 function semearBase() {
   if (!EU || EU.perfil !== 'admin') return;
   let n = 0, mudou = false;
-  [SEMENTE_BASE, SEMENTE_DECISOES].forEach(sem => {
+  [SEMENTE_BASE, SEMENTE_DECISOES, SEMENTE_SEXO].forEach(sem => {
     const feitas = ESTADO.sementes || [];
     if (feitas.includes(sem.id)) return;
     LISTAS.forEach(l => { n += incluirNaLista(l.k, sem.listas[l.k] || []).novos; });
@@ -1815,6 +1828,7 @@ const CAMPOS_MENU = [
   { id: 'cCargo',  lista: 'cargos',        campo: 'cargo',        rotulo: 'cargo' },
   { id: 'cSetor',  lista: 'setores',       campo: 'setor',        rotulo: 'setor' },
   { id: 'cStatus', lista: 'status',        campo: 'status',       rotulo: 'status' },
+  { id: 'cSexo',   lista: 'sexo',          campo: 'sexo',         rotulo: 'sexo' },
   { id: 'cGestor', lista: 'gestores',      campo: 'gestor',       rotulo: 'gestor' },
   { id: 'cTurno',  lista: 'turnos',        campo: 'turno',        rotulo: 'turno' },
   { id: 'cTipo',   lista: 'tipos',         campo: 'tipo',         rotulo: 'tipo de contratação' },
@@ -1870,6 +1884,24 @@ function seloStatus(v) {
   if (!v) return '—';
   return `<span class="badge ${ESTILO_STATUS[semAcento(v)] || 'st-neutro'}">${esc(v)}</span>`;
 }
+function celSexo(c) {
+  if (!pode('cadastrar')) return esc(c.sexo) || '—';
+  const itens = ordenar(ESTADO.base.sexo);
+  return `<select class="sel-sexo${c.sexo ? '' : ' vazio'}" data-id="${esc(c.id)}" onchange="mudarSexo(this)" aria-label="Sexo de ${esc(c.nome)}">
+    <option value="">informar</option>${c.sexo && !itens.includes(c.sexo) ? `<option selected>${esc(c.sexo)}</option>` : ''}
+    ${itens.map(v => `<option value="${esc(v)}"${v === c.sexo ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
+}
+function mudarSexo(el) {
+  if (!pode('cadastrar')) return;
+  const c = porId(el.dataset.id); if (!c) return;
+  c.sexo = el.value; c._por = EU.nome; c._em = agoraISO();
+  el.classList.toggle('vazio', !el.value);
+  alterou();
+  const semSexo = ESTADO.colaboradores.filter(x => !x.sexo).length;
+  const op = [...$('filtroSexo').options].find(o => o.value === '__vazio__');
+  if (op) op.textContent = `Sexo não informado (${semSexo})`;
+  if ($('filtroSexo').value) renderizarColaboradores();
+}
 // posicao guarda só a ordem de entrada (a da planilha); a coluna Nº é a contagem das linhas na tela
 function anteriorPos() { const c = editandoId != null && ESTADO.colaboradores.find(x => x.id === editandoId); return c && +c.posicao ? +c.posicao : proximaPosicao(); }
 function proximaPosicao() { return ESTADO.colaboradores.reduce((m, c) => Math.max(m, +c.posicao || 0), 0) + 1; }
@@ -1893,11 +1925,14 @@ function renderizarColaboradores() {
   const escolhido = fs.value;
   fs.innerHTML = '<option value="">Todos os status</option>' + ordenar(ESTADO.base.status).map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
   fs.value = escolhido;
+  const semSexo = ESTADO.colaboradores.filter(c => !c.sexo).length;
+  preencherFiltro('filtroSexo', 'Todos os sexos', [...ordenar(ESTADO.base.sexo).map(v => [v, v]), ...(semSexo ? [['__vazio__', `Sexo não informado (${semSexo})`]] : [])]);
   const termo = semAcento($('filtroNome').value.trim());
   const todos = ESTADO.colaboradores;
   const lista = todos
     .filter(c => !fs.value || semAcento(c.status) === semAcento(fs.value))
-    .filter(c => !termo || semAcento([c.matricula, c.nome, c.cargo, c.tipo, c.status, c.gestor, c.setor, c.turno].join(' ')).includes(termo))
+    .filter(c => { const v = $('filtroSexo').value; return !v || (v === '__vazio__' ? !c.sexo : c.sexo === v); })
+    .filter(c => !termo || semAcento([c.matricula, c.nome, c.sexo, c.cargo, c.tipo, c.status, c.gestor, c.setor, c.turno].join(' ')).includes(termo))
     .sort((a, b) => {
       const x = valorOrdem(a, ordem.campo), y = valorOrdem(b, ordem.campo);
       const r = x < y ? -1 : x > y ? 1 : a.nome.localeCompare(b.nome, 'pt-BR');
@@ -1911,10 +1946,10 @@ function renderizarColaboradores() {
   $('thVenc2').textContent = `2ª experiência (${ESTADO.parametros.periodo2}d)`;
   $('contagemColab').textContent = lista.length === todos.length ? `${todos.length} colaboradores` : `${lista.length} de ${todos.length}`;
   if (!todos.length) {
-    tbody.innerHTML = `<tr><td colspan="14" class="empty-state"><p>Nenhum colaborador cadastrado.</p>${pode('cadastrar') ? '<button class="btn btn-primary" onclick="abrirCadastro()">＋ Cadastrar o primeiro</button>' : ''}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="15" class="empty-state"><p>Nenhum colaborador cadastrado.</p>${pode('cadastrar') ? '<button class="btn btn-primary" onclick="abrirCadastro()">＋ Cadastrar o primeiro</button>' : ''}</td></tr>`;
     return;
   }
-  if (!lista.length) { tbody.innerHTML = '<tr><td colspan="14" class="empty-state"><p>Nenhum resultado para a busca.</p></td></tr>'; return; }
+  if (!lista.length) { tbody.innerHTML = '<tr><td colspan="15" class="empty-state"><p>Nenhum resultado para a busca.</p></td></tr>'; return; }
   tbody.innerHTML = lista.map((col, i) => {
     const s = situacao(col);
     const autoria = col._por ? ` title="Última alteração: ${esc(col._por)} em ${esc(new Date(col._em).toLocaleString('pt-BR'))}"` : '';
@@ -1923,6 +1958,7 @@ function renderizarColaboradores() {
       <td class="num fixa">${i + 1}</td>
       <td>${esc(col.matricula) || '—'}</td>
       <td class="nome">${esc(col.nome)}</td>
+      <td>${celSexo(col)}</td>
       <td>${esc(col.cargo)}</td>
       <td>${esc(col.tipo) || '—'}</td>
       <td class="data">${esc(col.dataAdmissao)}</td>
@@ -2018,7 +2054,7 @@ function salvarCadastro() {
   const nome = limpaTexto($('cNome').value), adm = $('cAdm').value;
   const dados = {
     cargo: lerMenu('cCargo'), tipo: lerMenu('cTipo'), status: lerMenu('cStatus'),
-    gestor: lerMenu('cGestor'), setor: lerMenu('cSetor'), turno: lerMenu('cTurno'), motivoSaida: lerMenu('cMotivo'),
+    gestor: lerMenu('cGestor'), setor: lerMenu('cSetor'), turno: lerMenu('cTurno'), motivoSaida: lerMenu('cMotivo'), sexo: lerMenu('cSexo'),
   };
   let ok = true;
   if (!matricula) { marcarErro('Matricula', 'Informe a matrícula.'); ok = false; }
@@ -2077,7 +2113,7 @@ function importarColaboradores() {
 }
 function aplicarImportacao(lista) {
   let novos = 0, repetidos = 0, invalidos = 0, itensBase = 0;
-  const campos = { cargo: 'cargos', tipo: 'tipos', status: 'status', gestor: 'gestores', setor: 'setores', turno: 'turnos' };
+  const campos = { cargo: 'cargos', tipo: 'tipos', status: 'status', gestor: 'gestores', setor: 'setores', turno: 'turnos', sexo: 'sexo' };
   lista.forEach(c => {
     if (!c || !c.nome || !lerDataBR(c.dataAdmissao)) { invalidos++; return; }
     const nome = limpaTexto(c.nome);
@@ -2399,12 +2435,12 @@ function hojeArquivo() { const d = hoje(); return `${d.getFullYear()}-${String(d
 function exportarCSV() {
   if (!pode('dados')) return;
   const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  let csv = '\uFEFFNº;MATRÍCULA;NOME COMPLETO;CARGO;TIPO DE CONTRATAÇÃO;DATA DE ADMISSÃO;VENCIMENTO 1ª EXPERIÊNCIA;VENCIMENTO 2ª EXPERIÊNCIA;STATUS;GESTOR IMEDIATO;SETOR;TURNO;DATA DE DESLIGAMENTO;TEMPO DE EMPRESA;MOTIVO DA SAÍDA;SUBSTITUIU;SUBSTITUÍDO POR;DECISÃO 1ª EXPERIÊNCIA;DECISÃO 2ª EXPERIÊNCIA;OBSERVAÇÕES\n';
+  let csv = '\uFEFFNº;MATRÍCULA;NOME COMPLETO;SEXO;CARGO;TIPO DE CONTRATAÇÃO;DATA DE ADMISSÃO;VENCIMENTO 1ª EXPERIÊNCIA;VENCIMENTO 2ª EXPERIÊNCIA;STATUS;GESTOR IMEDIATO;SETOR;TURNO;DATA DE DESLIGAMENTO;TEMPO DE EMPRESA;MOTIVO DA SAÍDA;SUBSTITUIU;SUBSTITUÍDO POR;DECISÃO 1ª EXPERIÊNCIA;DECISÃO 2ª EXPERIÊNCIA;OBSERVAÇÕES\n';
   let n = 0;
   [...ESTADO.colaboradores].sort((a, b) => (+a.posicao || 1e9) - (+b.posicao || 1e9)).forEach(col => {
     const s = situacao(col);
     const obs = (col.notas || []).map(n => `${new Date(n.em).toLocaleDateString('pt-BR')} ${n.por}: ${n.texto}`).join(' | ');
-    csv += [++n, q(col.matricula), q(col.nome), q(col.cargo), q(col.tipo), q(col.dataAdmissao),
+    csv += [++n, q(col.matricula), q(col.nome), q(col.sexo), q(col.cargo), q(col.tipo), q(col.dataAdmissao),
       q(s ? fmt(s.venc1) : ''), q(s ? fmt(s.venc2) : ''), q(col.status), q(col.gestor), q(col.setor), q(col.turno), q(col.dataDesligamento), q(tempoDeEmpresa(col)), q(col.motivoSaida), q((porId(col.substituiu) || {}).nome), q((porId(col.substituidoPor) || {}).nome), q(col.decisao1), q(col.decisao2), q(obs)].join(';') + '\n';
   });
   baixar(`qlp-${hojeArquivo()}.csv`, csv, 'text/csv;charset=utf-8;');

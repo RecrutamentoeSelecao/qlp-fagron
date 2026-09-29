@@ -273,12 +273,27 @@
     .campo select.sx-f,.campo select.sx-m{font-weight:600}
     .sel-sexo.vazio{background:#FBF4E4;border-color:#E6D3A8;color:var(--ambar);font-weight:600;font-size:11px;text-transform:uppercase}
     .sel-sexo:focus{outline:2px solid var(--vermelho);outline-offset:-1px}
+    .titulo-dash{font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--texto-2);margin:32px 0 12px}
+    .titulo-dash span{font-weight:400;letter-spacing:0;text-transform:none;margin-left:8px;color:var(--texto-3)}
+    .grade-dash{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
+    @media (max-width:900px){.grade-dash{grid-template-columns:1fr}}
+    .cartao-dash{margin-bottom:0}
+    .barras{padding:12px 16px 14px}
+    .barra-linha{display:grid;grid-template-columns:minmax(110px,190px) 1fr 40px 44px;align-items:center;gap:10px;padding:5px 0;font-size:13px}
+    .barra-rotulo{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .barra-trilho{height:14px;background:var(--faixa);position:relative}
+    .barra{position:absolute;left:0;top:0;bottom:0;background:var(--vermelho)}
+    .barra.b-rosa{background:#E07BA8}
+    .barra.b-azul{background:#4C86C9}
+    .barra.b-cinza{background:#C9C6C1}
+    .barra-num{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+    .barra-pct{text-align:right;color:var(--texto-3);font-variant-numeric:tabular-nums}
     table.qlp td.auto{color:var(--texto-2);background:#FAFAF8}
     table.qlp td.auto.nome{color:var(--texto)}
     table.qlp td.motivo{white-space:normal;min-width:220px;max-width:320px}
     tr.desligado-hist td.nome{text-decoration:line-through;text-decoration-color:var(--linha)}
     .falta{background:#FBF4E4;color:var(--ambar);font-weight:600;font-size:11px;padding:1px 6px;text-transform:uppercase;letter-spacing:.04em}
-    .pend{display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;background:var(--ambar);color:#fff;font-weight:700;font-size:12px;cursor:help;vertical-align:middle}
+    .alerta{display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;background:var(--ambar);color:#fff;font-weight:700;font-size:12px;cursor:help;vertical-align:middle}
     .link-pessoa{background:none;border:0;padding:0;font:inherit;color:var(--texto);text-decoration:underline;text-decoration-color:var(--linha);cursor:pointer;text-align:left}
     .link-pessoa:hover{text-decoration-color:var(--vermelho)}
     .subtitulo-janela{font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--texto-2);border-top:1px solid var(--linha-leve);padding-top:14px;margin-top:2px}
@@ -383,6 +398,8 @@
           </table>
         </div>
       </div>
+      <div class="titulo-dash">Quadro de ativos <span id="notaDash"></span></div>
+      <div class="grade-dash" id="gradeDash"></div>
     </div>
   </div>
 
@@ -499,7 +516,7 @@
             <tbody></tbody>
           </table>
         </div>
-        <div class="section-rodape">"Em experiência" mostra quem ainda está no período e quem terminou há até 30 dias sem decisão. Vencimento em <span class="venc laranja">laranja</span> faltam 8 a 15 dias; em <span class="venc vermelho">vermelho</span>, até 7 — some quando a decisão é registrada. <span class="pend">!</span> vencida sem decisão. As opções dos menus vêm da Base.</div>
+        <div class="section-rodape">"Em experiência" mostra quem ainda está no período e quem terminou há até 30 dias sem decisão. Vencimento em <span class="venc laranja">laranja</span> faltam 8 a 15 dias; em <span class="venc vermelho">vermelho</span>, até 7 — some quando a decisão é registrada. <span class="alerta">!</span> vencida sem decisão. As opções dos menus vêm da Base.</div>
       </div>
     </div>
   </div>
@@ -747,7 +764,7 @@
 // QLP - Fagron Services Brazil
 // =====================================================================
 const VERSAO_APP = 9;              // subir sempre que o formato dos dados mudar
-const ROTULO_VERSAO = 'QLP v2.10.1';
+const ROTULO_VERSAO = 'QLP v2.11';
 const GH_API = 'https://api.github.com';
 const REPO_PADRAO = 'RecrutamentoeSelecao/qlp-fagron-dados';   // repositório privado dos dados
 const ARQUIVO = 'dados.json';
@@ -1548,7 +1565,40 @@ function mostrarEstado() {
   }
 }
 
+// Dashboards do Painel: ativos (status ATIVO ou sem status) agrupados
+function ativosAgora() { return ESTADO.colaboradores.filter(c => ['ATIVO', ''].includes(semAcento(c.status || ''))); }
+function cartaoDash(titulo, grupos, total, classe) {
+  const max = Math.max(1, ...grupos.map(g => g.n));
+  return `<div class="section cartao-dash">
+    <div class="section-title">${titulo} <span class="nota">${total} ativos</span></div>
+    <div class="barras">${grupos.map(g => `<div class="barra-linha">
+        <span class="barra-rotulo" title="${esc(g.rotulo)}">${esc(g.rotulo)}</span>
+        <span class="barra-trilho"><span class="barra ${g.classe || classe || ''}" style="width:${(g.n / max * 100).toFixed(1)}%"></span></span>
+        <span class="barra-num">${g.n}</span>
+        <span class="barra-pct">${total ? Math.round(g.n / total * 100) : 0}%</span>
+      </div>`).join('') || '<div class="vazio-base">Sem dados</div>'}</div>
+  </div>`;
+}
+function agrupar(lista, campo, ordemFixa) {
+  const m = new Map();
+  lista.forEach(c => { const k = c[campo] || ''; m.set(k, (m.get(k) || 0) + 1); });
+  let g = [...m.entries()].map(([k, n]) => ({ rotulo: k || 'Não informado', n, vazio: !k }));
+  g.sort((a, b) => (a.vazio - b.vazio) || (ordemFixa ? a.rotulo.localeCompare(b.rotulo, 'pt-BR') : b.n - a.n || a.rotulo.localeCompare(b.rotulo, 'pt-BR')));
+  g.forEach(x => { if (x.vazio) x.classe = 'b-cinza'; });
+  return g;
+}
+function renderizarDash() {
+  const at = ativosAgora(), t = at.length;
+  $('notaDash').textContent = `${t} colaboradores ativos · afastados e desligados ficam de fora`;
+  const sexo = agrupar(at, 'sexo', true).map(g => ({ ...g, classe: g.vazio ? 'b-cinza' : semAcento(g.rotulo) === 'FEMININO' ? 'b-rosa' : semAcento(g.rotulo) === 'MASCULINO' ? 'b-azul' : '' }));
+  $('gradeDash').innerHTML =
+    cartaoDash('Ativos por setor', agrupar(at, 'setor'), t) +
+    cartaoDash('Ativos por turno', agrupar(at, 'turno', true), t) +
+    cartaoDash('Ativos por sexo', sexo, t) +
+    cartaoDash('Ativos por tipo de contrato', agrupar(at, 'tipo'), t);
+}
 function atualizarPainel() {
+  renderizarDash();
   let n1 = 0, n2 = 0, ef = 0;
   const proximos = [];
   const vigentes = ESTADO.colaboradores.filter(c => !ehDesligado(c) && ehCLT(c));
@@ -1903,7 +1953,7 @@ function mudarSexo(el) {
   const c = porId(el.dataset.id); if (!c) return;
   c.sexo = el.value; c._por = EU.nome; c._em = agoraISO();
   el.classList.toggle('vazio', !el.value); corSexo(el);
-  alterou();
+  alterou(); renderizarDash();
   const semSexo = ESTADO.colaboradores.filter(x => !x.sexo).length;
   const op = [...$('filtroSexo').options].find(o => o.value === '__vazio__');
   if (op) op.textContent = `Sexo não informado (${semSexo})`;
@@ -2289,7 +2339,7 @@ function renderizarHistorico() {
       <td class="centro">${pode('cadastrar')
         ? `<button class="notinha${nNotas ? ' tem' : ''}" onclick="abrirCadastro('${esc(c.id)}', true)" aria-label="Observações de ${esc(c.nome)}" title="${nNotas ? esc(c.notas[c.notas.length - 1].texto) : 'Sem observações'}">📝${nNotas ? ` ${nNotas}` : ''}</button>`
         : (nNotas ? `📝 ${nNotas}` : '')}</td>
-      <td class="acoes">${pode('cadastrar') ? `<button class="btn btn-secondary" onclick="abrirCadastro('${esc(c.id)}', false, true)" aria-label="Movimentar ${esc(c.nome)}">Editar</button>` : ''}${pend.length ? ` <span class="pend" title="${esc(pend.join(' · '))}">!</span>` : ''}</td>
+      <td class="acoes">${pode('cadastrar') ? `<button class="btn btn-secondary" onclick="abrirCadastro('${esc(c.id)}', false, true)" aria-label="Movimentar ${esc(c.nome)}">Editar</button>` : ''}${pend.length ? ` <span class="alerta" title="${esc(pend.join(' · '))}">!</span>` : ''}</td>
     </tr>`;
   }).join('');
 }
@@ -2407,7 +2457,7 @@ function renderizarExperiencia() {
     const s = situacao(c);
     const nNotas = (c.notas || []).length;
     const p = decisaoPendente(c);
-    const aviso = p && p.faltam < 0 ? `<span class="pend" title="${p.qual}ª experiência vencida há ${-p.faltam} dia(s) sem decisão">!</span>` : '';
+    const aviso = p && p.faltam < 0 ? `<span class="alerta" title="${p.qual}ª experiência vencida há ${-p.faltam} dia(s) sem decisão">!</span>` : '';
     return `<tr${ehDesligado(c) ? ' class="desligado-hist"' : ''}>
       <td class="num fixa">${i + 1}</td>
       <td class="auto">${esc(c.matricula) || '—'}</td>

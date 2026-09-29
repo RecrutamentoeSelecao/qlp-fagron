@@ -267,6 +267,10 @@
     .janela-corpo.tres .campo.tres-col{grid-column:span 3}
     .sel-sexo{padding:3px 6px;border:1px solid var(--linha-leve);background:transparent;font-size:12.5px;font-family:inherit;cursor:pointer;color:var(--texto)}
     .sel-sexo:hover{border-color:var(--linha)}
+    .sx-f{background:#FCE4EF;border-color:#F2B8D2;color:#A1285E}
+    .sx-m{background:#E3EEFB;border-color:#B5CDEE;color:#1F5A9E}
+    .sel-sexo.sx-f,.sel-sexo.sx-m{font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.03em}
+    .campo select.sx-f,.campo select.sx-m{font-weight:600}
     .sel-sexo.vazio{background:#FBF4E4;border-color:#E6D3A8;color:var(--ambar);font-weight:600;font-size:11px;text-transform:uppercase}
     .sel-sexo:focus{outline:2px solid var(--vermelho);outline-offset:-1px}
     table.qlp td.auto{color:var(--texto-2);background:#FAFAF8}
@@ -401,7 +405,6 @@
               <th class="ord num fixa" data-ord="posicao" title="Voltar à ordem original">Nº</th>
               <th class="ord" data-ord="matricula">Matrícula</th>
               <th class="ord" data-ord="nome">Nome completo</th>
-              <th class="ord" data-ord="sexo">Sexo</th>
               <th class="ord" data-ord="cargo">Cargo</th>
               <th class="ord" data-ord="tipo">Tipo</th>
               <th class="ord" data-ord="adm">Admissão</th>
@@ -411,6 +414,7 @@
               <th class="ord" data-ord="gestor">Gestor imediato</th>
               <th class="ord" data-ord="setor">Setor</th>
               <th class="ord" data-ord="turno">Turno</th>
+              <th class="ord" data-ord="sexo">Sexo</th>
               <th>Obs.</th>
               <th></th>
             </tr></thead>
@@ -623,14 +627,10 @@
         <input id="cAdm" type="date" oninput="mostrarVencimentos(); mostrarTempo()">
         <div class="erro" id="eAdm"></div>
       </div>
-      <div class="campo tres-col">
+      <div class="campo inteiro">
         <label for="cNome">Nome completo do colaborador <span class="obrig">*</span></label>
         <input id="cNome" autocomplete="off">
         <div class="erro" id="eNome"></div>
-      </div>
-      <div class="campo">
-        <label for="cSexo">Sexo</label>
-        <select id="cSexo" onchange="escolheuNoMenu(this)"></select>
       </div>
       <div class="campo dois">
         <label for="cCargo">Cargo <span class="obrig">*</span></label>
@@ -656,6 +656,10 @@
       <div class="campo">
         <label for="cTurno">Turno</label>
         <select id="cTurno" onchange="escolheuNoMenu(this)"></select>
+      </div>
+      <div class="campo">
+        <label for="cSexo">Sexo</label>
+        <select id="cSexo" onchange="escolheuNoMenu(this); corSexo(this)"></select>
       </div>
       <div class="campo inteiro vencimentos" id="cVenc"></div>
       <div class="campo inteiro subtitulo-janela" id="blocoMov">Desligamento e substituição</div>
@@ -743,7 +747,7 @@
 // QLP - Fagron Services Brazil
 // =====================================================================
 const VERSAO_APP = 9;              // subir sempre que o formato dos dados mudar
-const ROTULO_VERSAO = 'QLP v2.10';
+const ROTULO_VERSAO = 'QLP v2.10.1';
 const GH_API = 'https://api.github.com';
 const REPO_PADRAO = 'RecrutamentoeSelecao/qlp-fagron-dados';   // repositório privado dos dados
 const ARQUIVO = 'dados.json';
@@ -1884,10 +1888,13 @@ function seloStatus(v) {
   if (!v) return '—';
   return `<span class="badge ${ESTILO_STATUS[semAcento(v)] || 'st-neutro'}">${esc(v)}</span>`;
 }
+const COR_SEXO = { 'FEMININO': 'sx-f', 'MASCULINO': 'sx-m' };
+function classeSexo(v) { return COR_SEXO[semAcento(v)] || ''; }
+function corSexo(el) { el.classList.remove('sx-f', 'sx-m'); const k = classeSexo(el.value); if (k) el.classList.add(k); }
 function celSexo(c) {
-  if (!pode('cadastrar')) return esc(c.sexo) || '—';
+  if (!pode('cadastrar')) return c.sexo ? `<span class="badge ${classeSexo(c.sexo)}">${esc(c.sexo)}</span>` : '—';
   const itens = ordenar(ESTADO.base.sexo);
-  return `<select class="sel-sexo${c.sexo ? '' : ' vazio'}" data-id="${esc(c.id)}" onchange="mudarSexo(this)" aria-label="Sexo de ${esc(c.nome)}">
+  return `<select class="sel-sexo ${c.sexo ? classeSexo(c.sexo) : 'vazio'}" data-id="${esc(c.id)}" onchange="mudarSexo(this)" aria-label="Sexo de ${esc(c.nome)}">
     <option value="">informar</option>${c.sexo && !itens.includes(c.sexo) ? `<option selected>${esc(c.sexo)}</option>` : ''}
     ${itens.map(v => `<option value="${esc(v)}"${v === c.sexo ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
 }
@@ -1895,7 +1902,7 @@ function mudarSexo(el) {
   if (!pode('cadastrar')) return;
   const c = porId(el.dataset.id); if (!c) return;
   c.sexo = el.value; c._por = EU.nome; c._em = agoraISO();
-  el.classList.toggle('vazio', !el.value);
+  el.classList.toggle('vazio', !el.value); corSexo(el);
   alterou();
   const semSexo = ESTADO.colaboradores.filter(x => !x.sexo).length;
   const op = [...$('filtroSexo').options].find(o => o.value === '__vazio__');
@@ -1958,7 +1965,6 @@ function renderizarColaboradores() {
       <td class="num fixa">${i + 1}</td>
       <td>${esc(col.matricula) || '—'}</td>
       <td class="nome">${esc(col.nome)}</td>
-      <td>${celSexo(col)}</td>
       <td>${esc(col.cargo)}</td>
       <td>${esc(col.tipo) || '—'}</td>
       <td class="data">${esc(col.dataAdmissao)}</td>
@@ -1967,6 +1973,7 @@ function renderizarColaboradores() {
       <td>${esc(col.gestor) || '—'}</td>
       <td>${esc(col.setor) || '—'}</td>
       <td>${esc(col.turno) || '—'}</td>
+      <td>${celSexo(col)}</td>
       <td class="centro">${pode('cadastrar')
         ? `<button class="notinha${nNotas ? ' tem' : ''}" onclick="abrirCadastro('${esc(col.id)}', true)" aria-label="Observações de ${esc(col.nome)}" title="${nNotas ? esc(col.notas[col.notas.length - 1].texto) : 'Sem observações'}">📝${nNotas ? ` ${nNotas}` : ''}</button>`
         : (nNotas ? `<span title="${esc(col.notas[col.notas.length - 1].texto)}">📝 ${nNotas}</span>` : '')}</td>
@@ -2024,6 +2031,7 @@ function abrirCadastro(id, focarNotas, focarMov) {
   $('cNome').value = col ? col.nome : '';
   $('cAdm').value = col ? paraISO(col.dataAdmissao) : '';
   CAMPOS_MENU.forEach(cm => montarMenu(cm, col ? (col[cm.campo] || '') : ''));
+  corSexo($('cSexo'));
   if (!col) { const ativo = ESTADO.base.status.find(v => semAcento(v) === 'ATIVO'); if (ativo) $('cStatus').value = ativo; }
   $('dicaBase').hidden = pode('incluirBase');
   $('cDeslig').value = col && col.dataDesligamento ? paraISO(col.dataDesligamento) : '';

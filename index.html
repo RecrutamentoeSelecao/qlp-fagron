@@ -106,7 +106,7 @@
 
     /* BARRA DA LISTA */
     .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:14px 16px;border-bottom:1px solid var(--linha-leve)}
-    .toolbar input{flex:1;min-width:220px;padding:8px 12px;border:1px solid var(--linha);font-size:14px;background:#fff}
+    .toolbar input{flex:1;min-width:260px;padding:8px 12px;border:1px solid var(--linha);font-size:14px;background:#fff}
     .toolbar input:focus{outline:2px solid var(--vermelho);outline-offset:-1px}
     .contagem{font-size:12px;color:var(--texto-2);white-space:nowrap}
     .acoes{white-space:nowrap;text-align:right}
@@ -227,7 +227,7 @@
     .notinha{background:none;border:1px solid transparent;cursor:pointer;font-size:13px;padding:2px 6px;color:var(--texto-3);opacity:.55}
     .notinha.tem{opacity:1;color:var(--texto);border-color:var(--linha)}
     .notinha:hover{opacity:1;border-color:var(--linha)}
-    .toolbar select{padding:8px 10px;border:1px solid var(--linha);font-size:14px;background:#fff;font-family:inherit}
+    .toolbar select{max-width:230px;padding:8px 10px;border:1px solid var(--linha);font-size:14px;background:#fff;font-family:inherit}
     .janela.janela-larga{max-width:860px}
     .janela-corpo.tres{grid-template-columns:repeat(4,1fr)}
     .janela-corpo.tres .campo.dois{grid-column:span 2}
@@ -245,6 +245,12 @@
     .sem-notas{font-size:13px;color:var(--texto-3)}
     .autoria-janela{margin-right:auto;font-size:12px;color:var(--texto-3);align-self:center}
     @media (max-width:760px){.janela-corpo.tres{grid-template-columns:1fr 1fr}}
+    th.ordh{cursor:pointer;user-select:none}
+    th.ordh:hover,th.ordh.ativo{color:var(--texto)}
+    th.ordh[data-seta]:not([data-seta=""])::after{content:" " attr(data-seta);font-size:9px}
+    table.qlp .fixa{position:sticky;left:0;z-index:1;background:var(--papel);box-shadow:1px 0 0 var(--linha-leve)}
+    table.qlp tbody tr:hover .fixa{background:#FAFAF8}
+    table.qlp td.fixa{color:var(--texto-3);font-weight:600}
     table.qlp td.auto{color:var(--texto-2);background:#FAFAF8}
     table.qlp td.auto.nome{color:var(--texto)}
     table.qlp td.motivo{white-space:normal;min-width:220px;max-width:320px}
@@ -332,7 +338,6 @@
     <div class="nav-item active" tabindex="0" onclick="mudarAba('painel', this)">Painel</div>
     <div class="nav-item" tabindex="0" onclick="mudarAba('colaboradores', this)">Colaboradores<span class="qtd" id="navQtdColab">0</span></div>
     <div class="nav-item" tabindex="0" onclick="mudarAba('historico', this)">Histórico</div>
-    <div class="nav-item" tabindex="0" onclick="mudarAba('relatorio', this)">Relatório</div>
     <div class="nav-item" tabindex="0" data-pode="base" onclick="mudarAba('base', this)">Base</div>
     <div class="nav-item" tabindex="0" onclick="mudarAba('parametros', this)">Parâmetros</div>
   </div>
@@ -373,7 +378,7 @@
         <div class="tabela-rolagem">
           <table id="tabelaColaboradores" class="qlp">
             <thead><tr>
-              <th class="ord num" data-ord="posicao">Nº</th>
+              <th class="ord num fixa" data-ord="posicao" title="Voltar à ordem original">Nº</th>
               <th class="ord" data-ord="matricula">Matrícula</th>
               <th class="ord" data-ord="nome">Nome completo</th>
               <th class="ord" data-ord="cargo">Cargo</th>
@@ -391,7 +396,7 @@
             <tbody></tbody>
           </table>
         </div>
-        <div class="section-rodape">Vencimentos: <span class="venc laranja">laranja</span> vence em 8 a 15 dias · <span class="venc vermelho">vermelho</span> vence em até 7 dias. Contagem conforme CLT: o dia da admissão é o dia 1. Clique no título de uma coluna para ordenar.</div>
+        <div class="section-rodape">Vencimentos: <span class="venc laranja">laranja</span> vence em 8 a 15 dias · <span class="venc vermelho">vermelho</span> vence em até 7 dias. Contagem conforme CLT: o dia da admissão é o dia 1. Clique no título de uma coluna para ordenar; clique em Nº para voltar à ordem original. A coluna Nº é sempre a contagem das linhas, de 1 em diante.</div>
       </div>
     </div>
   </div>
@@ -404,40 +409,30 @@
         <div class="intro">Cada colaborador aparece aqui automaticamente, na ordem das posições. As colunas em cinza vêm da aba Colaboradores. Preencha a data de desligamento, o motivo e quem substituiu quem em <strong>Editar</strong> — é o mesmo cadastro da aba Colaboradores, então tudo que muda num lado muda no outro, observações incluídas.</div>
         <div class="toolbar">
           <input type="text" id="buscaHist" placeholder="Buscar por nome, matrícula, cargo, motivo ou substituto" oninput="renderizarHistorico()">
-          <select id="filtroHist" onchange="renderizarHistorico()" aria-label="Filtrar">
+          <select id="filtroHist" onchange="renderizarHistorico()" aria-label="Filtrar por situação">
             <option value="">Todos</option>
             <option value="desligados">Só desligados</option>
             <option value="vigentes">Só quem está na casa</option>
+            <option value="substituicao">Com substituição</option>
             <option value="pendentes">Com pendência</option>
           </select>
+          <select id="filtroPeriodo" onchange="renderizarHistorico()" aria-label="Filtrar por mês do desligamento"></select>
+          <select id="filtroMotivo" onchange="renderizarHistorico()" aria-label="Filtrar por motivo da saída"></select>
+          <select id="filtroCargoH" onchange="renderizarHistorico()" aria-label="Filtrar por cargo"></select>
+          <button class="btn" onclick="limparFiltrosHist()">Limpar filtros</button>
           <span class="contagem" id="contagemHist"></span>
         </div>
         <div class="tabela-rolagem">
           <table id="tabelaHistorico" class="qlp">
             <thead><tr>
-              <th class="num">Nº</th><th>Matrícula</th><th>Nome do colaborador</th><th>Cargo</th><th>Tipo</th><th>Admissão</th>
-              <th>Desligamento</th><th>Tempo de empresa</th><th>Motivo da saída</th>
-              <th>Substituiu (ocupante anterior)</th><th>Substituído por (próximo ocupante)</th><th>Obs.</th><th></th>
+              <th class="ordh num fixa" data-ord="posicao" title="Voltar à ordem original">Nº</th><th class="ordh" data-ord="matricula">Matrícula</th><th class="ordh" data-ord="nome">Nome do colaborador</th><th class="ordh" data-ord="cargo">Cargo</th><th class="ordh" data-ord="tipo">Tipo</th><th class="ordh" data-ord="adm">Admissão</th>
+              <th class="ordh" data-ord="desl">Desligamento</th><th class="ordh" data-ord="tempo">Tempo de empresa</th><th class="ordh" data-ord="motivoSaida">Motivo da saída</th>
+              <th class="ordh" data-ord="substituiu">Substituiu (ocupante anterior)</th><th class="ordh" data-ord="substituidoPor">Substituído por (próximo ocupante)</th><th>Obs.</th><th></th>
             </tr></thead>
             <tbody></tbody>
           </table>
         </div>
-        <div class="section-rodape">Tempo de empresa em meses completos, até o desligamento ou até hoje — atualiza sozinho a cada dia. Com menos de um mês aparece “–”. <span class="falta">informar</span> marca o que falta preencher.</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- RELATÓRIO -->
-  <div class="content" id="abaRelatorio">
-    <div class="content-wrapper largo">
-      <div class="section">
-        <div class="section-title">Relatório de experiência <button class="btn" data-pode="dados" onclick="exportarCSV()">Exportar CSV</button></div>
-        <div class="tabela-rolagem">
-          <table id="tabelaRelatorio" class="qlp">
-            <thead><tr><th class="num">Nº</th><th>Matrícula</th><th>Nome completo</th><th>Cargo</th><th>Tipo</th><th>Admissão</th><th id="thP1">1ª experiência</th><th id="thP2">2ª experiência</th><th>Status</th><th>Gestor imediato</th><th>Setor</th><th>Turno</th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
+        <div class="section-rodape">Tempo de empresa em meses completos, até o desligamento ou até hoje — atualiza sozinho a cada dia. Com menos de um mês aparece “–”. <span class="falta">informar</span> marca o que falta preencher. Clique no título de uma coluna para ordenar; em Nº, volta à ordem original.</div>
       </div>
     </div>
   </div>
@@ -555,12 +550,7 @@
   <div class="janela janela-larga" role="dialog" aria-modal="true" aria-labelledby="janelaTitulo">
     <div class="janela-topo" id="janelaTitulo">Novo colaborador</div>
     <div class="janela-corpo tres">
-      <div class="campo">
-        <label for="cPosicao">Nº posição <span class="obrig">*</span></label>
-        <input id="cPosicao" type="number" min="1" step="1">
-        <div class="erro" id="ePosicao"></div>
-      </div>
-      <div class="campo">
+      <div class="campo dois">
         <label for="cMatricula">Matrícula <span class="obrig">*</span></label>
         <input id="cMatricula" autocomplete="off" inputmode="numeric">
         <div class="erro" id="eMatricula"></div>
@@ -686,7 +676,7 @@
 // QLP - Fagron Services Brazil
 // =====================================================================
 const VERSAO_APP = 7;              // subir sempre que o formato dos dados mudar
-const ROTULO_VERSAO = 'QLP v2.7';
+const ROTULO_VERSAO = 'QLP v2.8';
 const GH_API = 'https://api.github.com';
 const REPO_PADRAO = 'RecrutamentoeSelecao/qlp-fagron-dados';   // repositório privado dos dados
 const ARQUIVO = 'dados.json';
@@ -1444,7 +1434,6 @@ function render() {
   atualizarPainel();
   renderizarColaboradores();
   renderizarHistorico();
-  renderizarRelatorio();
   renderizarParametros();
   renderizarPessoas();
   renderizarBase();
@@ -1503,19 +1492,6 @@ function atualizarPainel() {
       <td>${esc(x.c.nome)}</td><td>${esc(x.c.cargo)}</td><td>${esc(x.c.gestor) || '—'}</td>
       <td>${x.qual}</td><td>${fmt(x.data)}</td><td class="num"><strong>${faltamTexto(x.faltam)}</strong></td></tr>`).join('')
     : `<tr><td colspan="6" class="empty-state">Nenhuma avaliação vence nos próximos ${JANELA_ALERTA} dias.</td></tr>`;
-}
-
-function renderizarRelatorio() {
-  const tbody = document.querySelector('#tabelaRelatorio tbody');
-  const lista = [...ESTADO.colaboradores].sort((a, b) => (+a.posicao || 1e9) - (+b.posicao || 1e9) || a.nome.localeCompare(b.nome, 'pt-BR'));
-  $('thP1').textContent = `1ª experiência (${ESTADO.parametros.periodo1}d)`;
-  $('thP2').textContent = `2ª experiência (${ESTADO.parametros.periodo2}d)`;
-  tbody.innerHTML = lista.length ? lista.map(col => {
-    const s = situacao(col);
-    return `<tr><td class="num">${esc(col.posicao) || '—'}</td><td>${esc(col.matricula) || '—'}</td><td>${esc(col.nome)}</td><td>${esc(col.cargo)}</td>
-      <td>${esc(col.tipo) || '—'}</td><td>${esc(col.dataAdmissao)}</td><td>${s ? fmt(s.venc1) : '—'}</td><td>${s ? fmt(s.venc2) : '—'}</td>
-      <td>${esc(col.status) || '—'}</td><td>${esc(col.gestor) || '—'}</td><td>${esc(col.setor) || '—'}</td><td>${esc(col.turno) || '—'}</td></tr>`;
-  }).join('') : '<tr><td colspan="12" class="empty-state">Nenhum colaborador cadastrado.</td></tr>';
 }
 
 function renderizarParametros() {
@@ -1827,6 +1803,8 @@ function seloStatus(v) {
   if (!v) return '—';
   return `<span class="badge ${ESTILO_STATUS[semAcento(v)] || 'st-neutro'}">${esc(v)}</span>`;
 }
+// posicao guarda só a ordem de entrada (a da planilha); a coluna Nº é a contagem das linhas na tela
+function anteriorPos() { const c = editandoId != null && ESTADO.colaboradores.find(x => x.id === editandoId); return c && +c.posicao ? +c.posicao : proximaPosicao(); }
 function proximaPosicao() { return ESTADO.colaboradores.reduce((m, c) => Math.max(m, +c.posicao || 0), 0) + 1; }
 
 function valorOrdem(c, campo) {
@@ -1837,7 +1815,8 @@ function valorOrdem(c, campo) {
   return semAcento(c[campo] || '');
 }
 function ordenarPor(campo) {
-  ordem = ordem.campo === campo ? { campo, asc: !ordem.asc } : { campo, asc: true };
+  if (campo === 'posicao') ordem = { campo, asc: true };                // Nº: sempre volta à ordem original
+  else ordem = ordem.campo === campo ? { campo, asc: !ordem.asc } : { campo, asc: true };
   renderizarColaboradores();
 }
 
@@ -1851,7 +1830,7 @@ function renderizarColaboradores() {
   const todos = ESTADO.colaboradores;
   const lista = todos
     .filter(c => !fs.value || semAcento(c.status) === semAcento(fs.value))
-    .filter(c => !termo || semAcento([c.posicao, c.matricula, c.nome, c.cargo, c.tipo, c.status, c.gestor, c.setor, c.turno].join(' ')).includes(termo))
+    .filter(c => !termo || semAcento([c.matricula, c.nome, c.cargo, c.tipo, c.status, c.gestor, c.setor, c.turno].join(' ')).includes(termo))
     .sort((a, b) => {
       const x = valorOrdem(a, ordem.campo), y = valorOrdem(b, ordem.campo);
       const r = x < y ? -1 : x > y ? 1 : a.nome.localeCompare(b.nome, 'pt-BR');
@@ -1859,7 +1838,7 @@ function renderizarColaboradores() {
     });
   document.querySelectorAll('#tabelaColaboradores th.ord').forEach(th => {
     th.classList.toggle('ativo', th.dataset.ord === ordem.campo);
-    th.dataset.seta = th.dataset.ord === ordem.campo ? (ordem.asc ? '▲' : '▼') : '';
+    th.dataset.seta = th.dataset.ord === ordem.campo && ordem.campo !== 'posicao' ? (ordem.asc ? '▲' : '▼') : '';
   });
   $('thVenc1').textContent = `1ª experiência (${ESTADO.parametros.periodo1}d)`;
   $('thVenc2').textContent = `2ª experiência (${ESTADO.parametros.periodo2}d)`;
@@ -1869,12 +1848,12 @@ function renderizarColaboradores() {
     return;
   }
   if (!lista.length) { tbody.innerHTML = '<tr><td colspan="14" class="empty-state"><p>Nenhum resultado para a busca.</p></td></tr>'; return; }
-  tbody.innerHTML = lista.map(col => {
+  tbody.innerHTML = lista.map((col, i) => {
     const s = situacao(col);
     const autoria = col._por ? ` title="Última alteração: ${esc(col._por)} em ${esc(new Date(col._em).toLocaleString('pt-BR'))}"` : '';
     const nNotas = (col.notas || []).length;
     return `<tr${autoria}${ehDesligado(col) ? ' class="desligado"' : ''}>
-      <td class="num">${esc(col.posicao) || '—'}</td>
+      <td class="num fixa">${i + 1}</td>
       <td>${esc(col.matricula) || '—'}</td>
       <td class="nome">${esc(col.nome)}</td>
       <td>${esc(col.cargo)}</td>
@@ -1897,7 +1876,7 @@ function renderizarColaboradores() {
 }
 
 function limparErros() {
-  ['Posicao', 'Matricula', 'Nome', 'Cargo', 'Adm'].forEach(k => { $('e' + k).textContent = ''; $('c' + k).classList.remove('invalido'); });
+  ['Matricula', 'Nome', 'Cargo', 'Adm'].forEach(k => { $('e' + k).textContent = ''; $('c' + k).classList.remove('invalido'); });
 }
 function marcarErro(k, msg) { $('e' + k).textContent = msg; $('c' + k).classList.add('invalido'); }
 
@@ -1938,7 +1917,6 @@ function abrirCadastro(id, focarNotas, focarMov) {
   const col = editandoId != null ? ESTADO.colaboradores.find(c => c.id === editandoId) : null;
   $('janelaTitulo').textContent = col ? `Editar — ${col.nome}` : 'Novo colaborador';
   $('btnSalvarColab').textContent = col ? 'Salvar alterações' : 'Cadastrar';
-  $('cPosicao').value = col ? (col.posicao || '') : proximaPosicao();
   $('cMatricula').value = col ? (col.matricula || '') : '';
   $('cNome').value = col ? col.nome : '';
   $('cAdm').value = col ? paraISO(col.dataAdmissao) : '';
@@ -1968,7 +1946,7 @@ function salvarCadastro() {
   if ($('cNota').value.trim()) adicionarNota();          // observação digitada e não adicionada entra junto
   limparErros();
   const lerMenu = id => { const v = $(id).value; return v === NOVO ? '' : v; };
-  const posicao = parseInt($('cPosicao').value, 10);
+  const posicao = anteriorPos();
   const matricula = $('cMatricula').value.trim().replace(/\s+/g, '');
   const nome = limpaTexto($('cNome').value), adm = $('cAdm').value;
   const dados = {
@@ -1976,7 +1954,6 @@ function salvarCadastro() {
     gestor: lerMenu('cGestor'), setor: lerMenu('cSetor'), turno: lerMenu('cTurno'), motivoSaida: lerMenu('cMotivo'),
   };
   let ok = true;
-  if (!(posicao >= 1)) { marcarErro('Posicao', 'Informe um número a partir de 1.'); ok = false; }
   if (!matricula) { marcarErro('Matricula', 'Informe a matrícula.'); ok = false; }
   else if (ESTADO.colaboradores.some(c => c.id !== editandoId && String(c.matricula || '') === matricula)) {
     const outro = ESTADO.colaboradores.find(c => c.id !== editandoId && String(c.matricula || '') === matricula);
@@ -1995,10 +1972,6 @@ function salvarCadastro() {
   dados.dataDesligamento = desl ? paraBR(desl) : '';
   if (desl) dados.status = itemStatus('DESLIGADO');                                   // data preenchida → desligado
   else if (anterior && anterior.dataDesligamento && ehDesligado(dados)) dados.status = itemStatus('ATIVO');   // data apagada → volta a ativo
-  if (!ehDesligado(dados)) {
-    const ocupante = ESTADO.colaboradores.find(c => c.id !== editandoId && +c.posicao === posicao && !ehDesligado(c));
-    if (ocupante && !confirm(`A posição ${posicao} já está com ${ocupante.nome} (${ocupante.status || 'sem status'}). Salvar assim mesmo?`)) return;
-  }
   const registro = { posicao, matricula, nome, dataAdmissao: paraBR(adm), ...dados, notas: notasEdicao, _por: EU.nome, _em: agoraISO() };
   const substituiu = $('cSubstituiu').value, substituidoPor = $('cSubstPor').value;
   let col;
@@ -2009,7 +1982,7 @@ function salvarCadastro() {
   } else {
     col = { id: novoId('c'), ...registro, substituiu: '', substituidoPor: '' };
     ESTADO.colaboradores.push(col);
-    mostrarAviso(`${nome} cadastrado(a) na posição ${posicao}`);
+    mostrarAviso(`${nome} cadastrado(a)`);
   }
   aplicarVinculos(col, substituiu, substituidoPor);
   $('cNota').value = '';
@@ -2091,13 +2064,11 @@ function tempoDeEmpresa(col) {
   const anos = a ? `${a} ${a === 1 ? 'ano' : 'anos'}` : '', meses = r ? `${r} ${r === 1 ? 'mês' : 'meses'}` : '';
   return anos && meses ? `${anos} e ${meses}` : anos || meses;
 }
-function rotuloPessoa(c) { return `Nº ${c.posicao || '—'} · ${c.nome}${c.status ? ` — ${c.status}` : ''}`; }
+function rotuloPessoa(c) { return `${c.nome}${c.matricula ? ` (${c.matricula})` : ''}${c.status ? ` — ${c.status}` : ''}`; }
 function montarMenuPessoa(idSel, eu, valor, desligadosPrimeiro) {
   const outros = ESTADO.colaboradores.filter(c => c.id !== eu);
-  const minhaPos = eu ? +((porId(eu) || {}).posicao) : +$('cPosicao').value;
   outros.sort((a, b) =>
-    ((+b.posicao === minhaPos) - (+a.posicao === minhaPos))
-    || (desligadosPrimeiro ? ehDesligado(b) - ehDesligado(a) : ehDesligado(a) - ehDesligado(b))
+    (desligadosPrimeiro ? ehDesligado(b) - ehDesligado(a) : ehDesligado(a) - ehDesligado(b))
     || a.nome.localeCompare(b.nome, 'pt-BR'));
   $(idSel).innerHTML = '<option value="">—</option>' + outros.map(c => `<option value="${esc(c.id)}">${esc(rotuloPessoa(c))}</option>`).join('');
   $(idSel).value = valor && outros.some(c => c.id === valor) ? valor : '';
@@ -2136,23 +2107,64 @@ function nomeLigado(id) {
   return c ? `<button class="link-pessoa" onclick="abrirCadastro('${esc(c.id)}')" title="${esc(rotuloPessoa(c))}">${esc(c.nome)}</button>` : '—';
 }
 
+let ordemH = { campo: 'posicao', asc: true };
+const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+function mesDeslig(c) { const d = lerDataBR(c.dataDesligamento); return d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` : ''; }
+function valorOrdemH(c, campo) {
+  if (campo === 'desl') { const d = lerDataBR(c.dataDesligamento); return d ? d.getTime() : 0; }
+  if (campo === 'tempo') { const m = mesesDeEmpresa(c); return m === null ? -1 : m; }
+  if (campo === 'substituiu' || campo === 'substituidoPor') return semAcento((porId(c[campo]) || {}).nome || '');
+  return valorOrdem(c, campo);
+}
+function ordenarHist(campo) {
+  if (campo === 'posicao') ordemH = { campo, asc: true };
+  else ordemH = ordemH.campo === campo ? { campo, asc: !ordemH.asc } : { campo, asc: true };
+  renderizarHistorico();
+}
+function preencherFiltro(id, rotuloTodos, opcoes) {
+  const el = $(id), atual = el.value;
+  el.innerHTML = `<option value="">${rotuloTodos}</option>` + opcoes.map(([v, r]) => `<option value="${esc(v)}">${esc(r)}</option>`).join('');
+  el.value = opcoes.some(([v]) => v === atual) ? atual : '';
+}
+function limparFiltrosHist() {
+  ['filtroHist', 'filtroPeriodo', 'filtroMotivo', 'filtroCargoH'].forEach(id => $(id).value = '');
+  $('buscaHist').value = '';
+  ordemH = { campo: 'posicao', asc: true };
+  renderizarHistorico();
+}
 function renderizarHistorico() {
   const tbody = document.querySelector('#tabelaHistorico tbody');
-  const f = $('filtroHist').value;
-  const termo = semAcento($('buscaHist').value.trim());
   const todos = ESTADO.colaboradores;
+  const meses = [...new Set(todos.map(mesDeslig).filter(Boolean))].sort().reverse();
+  preencherFiltro('filtroPeriodo', 'Qualquer mês de desligamento', meses.map(m => [m, `${MESES[+m.slice(5) - 1]} de ${m.slice(0, 4)}`]));
+  preencherFiltro('filtroMotivo', 'Qualquer motivo', ordenar([...new Set(todos.map(c => c.motivoSaida).filter(Boolean))]).map(v => [v, v]));
+  preencherFiltro('filtroCargoH', 'Qualquer cargo', ordenar([...new Set(todos.map(c => c.cargo).filter(Boolean))]).map(v => [v, v]));
+  const f = $('filtroHist').value, per = $('filtroPeriodo').value, mot = $('filtroMotivo').value, car = $('filtroCargoH').value;
+  const termo = semAcento($('buscaHist').value.trim());
   const lista = todos
-    .filter(c => !f || (f === 'desligados' ? ehDesligado(c) : f === 'pendentes' ? pendenciasHist(c).length : !ehDesligado(c)))
-    .filter(c => !termo || semAcento([c.posicao, c.matricula, c.nome, c.cargo, c.motivoSaida, (porId(c.substituiu) || {}).nome, (porId(c.substituidoPor) || {}).nome].join(' ')).includes(termo))
-    .sort((a, b) => (+a.posicao || 1e9) - (+b.posicao || 1e9) || valorOrdem(a, 'adm') - valorOrdem(b, 'adm'));
+    .filter(c => !f || (f === 'desligados' ? ehDesligado(c) : f === 'pendentes' ? pendenciasHist(c).length
+      : f === 'substituicao' ? (porId(c.substituiu) || porId(c.substituidoPor)) : !ehDesligado(c)))
+    .filter(c => !per || mesDeslig(c) === per)
+    .filter(c => !mot || c.motivoSaida === mot)
+    .filter(c => !car || c.cargo === car)
+    .filter(c => !termo || semAcento([c.matricula, c.nome, c.cargo, c.motivoSaida, (porId(c.substituiu) || {}).nome, (porId(c.substituidoPor) || {}).nome].join(' ')).includes(termo))
+    .sort((a, b) => {
+      const x = valorOrdemH(a, ordemH.campo), y = valorOrdemH(b, ordemH.campo);
+      const r = x < y ? -1 : x > y ? 1 : (valorOrdem(a, 'posicao') - valorOrdem(b, 'posicao'));
+      return ordemH.asc ? r : -r;
+    });
+  document.querySelectorAll('#tabelaHistorico th.ordh').forEach(th => {
+    th.classList.toggle('ativo', th.dataset.ord === ordemH.campo);
+    th.dataset.seta = th.dataset.ord === ordemH.campo && ordemH.campo !== 'posicao' ? (ordemH.asc ? '▲' : '▼') : '';
+  });
   const nDesl = todos.filter(ehDesligado).length, nPend = todos.filter(c => pendenciasHist(c).length).length;
   $('contagemHist').textContent = `${lista.length} de ${todos.length} · ${nDesl} desligado(s)${nPend ? ` · ${nPend} com pendência` : ''}`;
-  if (!lista.length) { tbody.innerHTML = `<tr><td colspan="13" class="empty-state">${todos.length ? 'Nenhum registro para este filtro.' : 'Nenhum colaborador cadastrado.'}</td></tr>`; return; }
-  tbody.innerHTML = lista.map(c => {
+  if (!lista.length) { tbody.innerHTML = `<tr><td colspan="13" class="empty-state">${todos.length ? 'Nenhum registro para estes filtros.' : 'Nenhum colaborador cadastrado.'}</td></tr>`; return; }
+  tbody.innerHTML = lista.map((c, i) => {
     const pend = pendenciasHist(c);
     const nNotas = (c.notas || []).length;
     return `<tr${ehDesligado(c) ? ' class="desligado-hist"' : ''}>
-      <td class="num">${esc(c.posicao) || '—'}</td>
+      <td class="num fixa">${i + 1}</td>
       <td class="auto">${esc(c.matricula) || '—'}</td>
       <td class="auto nome">${esc(c.nome)}</td>
       <td class="auto">${esc(c.cargo)}</td>
@@ -2199,11 +2211,12 @@ function hojeArquivo() { const d = hoje(); return `${d.getFullYear()}-${String(d
 function exportarCSV() {
   if (!pode('dados')) return;
   const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  let csv = '\uFEFFNº POSIÇÃO;MATRÍCULA;NOME COMPLETO;CARGO;TIPO DE CONTRATAÇÃO;DATA DE ADMISSÃO;VENCIMENTO 1ª EXPERIÊNCIA;VENCIMENTO 2ª EXPERIÊNCIA;STATUS;GESTOR IMEDIATO;SETOR;TURNO;DATA DE DESLIGAMENTO;TEMPO DE EMPRESA;MOTIVO DA SAÍDA;SUBSTITUIU;SUBSTITUÍDO POR;OBSERVAÇÕES\n';
+  let csv = '\uFEFFNº;MATRÍCULA;NOME COMPLETO;CARGO;TIPO DE CONTRATAÇÃO;DATA DE ADMISSÃO;VENCIMENTO 1ª EXPERIÊNCIA;VENCIMENTO 2ª EXPERIÊNCIA;STATUS;GESTOR IMEDIATO;SETOR;TURNO;DATA DE DESLIGAMENTO;TEMPO DE EMPRESA;MOTIVO DA SAÍDA;SUBSTITUIU;SUBSTITUÍDO POR;OBSERVAÇÕES\n';
+  let n = 0;
   [...ESTADO.colaboradores].sort((a, b) => (+a.posicao || 1e9) - (+b.posicao || 1e9)).forEach(col => {
     const s = situacao(col);
     const obs = (col.notas || []).map(n => `${new Date(n.em).toLocaleDateString('pt-BR')} ${n.por}: ${n.texto}`).join(' | ');
-    csv += [col.posicao || '', q(col.matricula), q(col.nome), q(col.cargo), q(col.tipo), q(col.dataAdmissao),
+    csv += [++n, q(col.matricula), q(col.nome), q(col.cargo), q(col.tipo), q(col.dataAdmissao),
       q(s ? fmt(s.venc1) : ''), q(s ? fmt(s.venc2) : ''), q(col.status), q(col.gestor), q(col.setor), q(col.turno), q(col.dataDesligamento), q(tempoDeEmpresa(col)), q(col.motivoSaida), q((porId(col.substituiu) || {}).nome), q((porId(col.substituidoPor) || {}).nome), q(obs)].join(';') + '\n';
   });
   baixar(`qlp-${hojeArquivo()}.csv`, csv, 'text/csv;charset=utf-8;');
@@ -2263,6 +2276,8 @@ function mudarAba(abaId, el) {
 document.addEventListener('click', e => {
   const th = e.target.closest && e.target.closest('#tabelaColaboradores th.ord');
   if (th) ordenarPor(th.dataset.ord);
+  const thh = e.target.closest && e.target.closest('#tabelaHistorico th.ordh');
+  if (thh) ordenarHist(thh.dataset.ord);
 });
 let avisoTimer;
 function mostrarAviso(txt) {

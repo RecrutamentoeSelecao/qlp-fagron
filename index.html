@@ -251,6 +251,16 @@
     table.qlp .fixa{position:sticky;left:0;z-index:1;background:var(--papel);box-shadow:1px 0 0 var(--linha-leve)}
     table.qlp tbody tr:hover .fixa{background:#FAFAF8}
     table.qlp td.fixa{color:var(--texto-3);font-weight:600}
+    th.orde{cursor:pointer;user-select:none}
+    th.orde:hover,th.orde.ativo{color:var(--texto)}
+    th.orde[data-seta]:not([data-seta=""])::after{content:" " attr(data-seta);font-size:9px}
+    .sel-decisao{padding:5px 8px;border:1px solid var(--campo-borda);background:var(--campo);font-size:12.5px;font-family:inherit;font-weight:600;min-width:150px;cursor:pointer}
+    .sel-decisao:focus{outline:2px solid var(--vermelho);outline-offset:-1px}
+    .sel-decisao.dc-ambar,.decisao.dc-ambar{background:#FBF4E4;border-color:#E6D3A8;color:var(--ambar)}
+    .sel-decisao.dc-vermelho,.decisao.dc-vermelho{background:#FBEDEC;border-color:#EBC0BC;color:var(--vermelho-escuro)}
+    .sel-decisao.dc-verde,.decisao.dc-verde{background:#EEF6F1;border-color:#BFD9CB;color:var(--verde)}
+    .decisao{display:inline-block;padding:2px 8px;border:1px solid;font-size:11px;font-weight:600;text-transform:uppercase}
+    td.decisao-cel.pendente{background:#FBEDEC}
     table.qlp td.auto{color:var(--texto-2);background:#FAFAF8}
     table.qlp td.auto.nome{color:var(--texto)}
     table.qlp td.motivo{white-space:normal;min-width:220px;max-width:320px}
@@ -338,6 +348,7 @@
     <div class="nav-item active" tabindex="0" onclick="mudarAba('painel', this)">Painel</div>
     <div class="nav-item" tabindex="0" onclick="mudarAba('colaboradores', this)">Colaboradores<span class="qtd" id="navQtdColab">0</span></div>
     <div class="nav-item" tabindex="0" onclick="mudarAba('historico', this)">Histórico</div>
+    <div class="nav-item" tabindex="0" onclick="mudarAba('experiencia', this)">Controle do Período de Experiência</div>
     <div class="nav-item" tabindex="0" data-pode="base" onclick="mudarAba('base', this)">Base</div>
     <div class="nav-item" tabindex="0" onclick="mudarAba('parametros', this)">Parâmetros</div>
   </div>
@@ -347,8 +358,8 @@
     <div class="content-wrapper">
       <div class="stats-grid">
         <div class="stat-card"><div class="stat-label">Ativos</div><div class="stat-value" id="totalColaboradores">0</div><div class="stat-nota" id="notaTotal"></div></div>
-        <div class="stat-card"><div class="stat-label">1ª avaliação próxima</div><div class="stat-value ambar" id="em45Dias">0</div><div class="stat-nota" id="nota45"></div></div>
-        <div class="stat-card"><div class="stat-label">2ª avaliação próxima</div><div class="stat-value ambar" id="em90Dias">0</div><div class="stat-nota" id="nota90"></div></div>
+        <div class="stat-card"><div class="stat-label">1ª experiência a decidir</div><div class="stat-value ambar" id="em45Dias">0</div><div class="stat-nota" id="nota45"></div></div>
+        <div class="stat-card"><div class="stat-label">2ª experiência a decidir</div><div class="stat-value ambar" id="em90Dias">0</div><div class="stat-nota" id="nota90"></div></div>
         <div class="stat-card"><div class="stat-label">Efetivados</div><div class="stat-value verde" id="efetivados">0</div><div class="stat-nota" id="notaEfet"></div></div>
       </div>
       <div class="section">
@@ -433,6 +444,48 @@
           </table>
         </div>
         <div class="section-rodape">Tempo de empresa em meses completos, até o desligamento ou até hoje — atualiza sozinho a cada dia. Com menos de um mês aparece “–”. <span class="falta">informar</span> marca o que falta preencher. Clique no título de uma coluna para ordenar; em Nº, volta à ordem original.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTROLE DO PERÍODO DE EXPERIÊNCIA -->
+  <div class="content" id="abaExperiencia">
+    <div class="content-wrapper largo">
+      <div class="section">
+        <div class="section-title">Controle do período de experiência <span class="nota">só contratos CLT</span></div>
+        <div class="intro">Para cada vencimento, escolha como seguir: na <strong>1ª experiência</strong>, prorrogar ou dispensar; na <strong>2ª</strong>, efetivar ou dispensar. A escolha grava na hora, com o nome de quem decidiu — passe o mouse sobre ela para ver. Aprendizes e estagiários não aparecem aqui.</div>
+        <div class="toolbar">
+          <input type="text" id="buscaExp" placeholder="Buscar por nome, matrícula, cargo, gestor ou decisão" oninput="renderizarExperiencia()">
+          <select id="filtroExp" onchange="renderizarExperiencia()" aria-label="Situação">
+            <option value="experiencia">Em experiência</option>
+            <option value="aguardando">Aguardando decisão</option>
+            <option value="decididas">Com decisão registrada</option>
+            <option value="todos">Todos os CLT</option>
+          </select>
+          <select id="filtroGestorE" onchange="renderizarExperiencia()" aria-label="Gestor"></select>
+          <button class="btn" onclick="limparFiltrosExp()">Limpar filtros</button>
+          <span class="contagem" id="contagemExp"></span>
+        </div>
+        <div class="tabela-rolagem">
+          <table id="tabelaExperiencia" class="qlp">
+            <thead><tr>
+              <th class="orde num fixa" data-ord="posicao" title="Voltar à ordem original">Nº</th>
+              <th class="orde" data-ord="matricula">Matrícula</th>
+              <th class="orde" data-ord="nome">Nome do colaborador</th>
+              <th class="orde" data-ord="cargo">Cargo</th>
+              <th class="orde" data-ord="gestor">Gestor imediato</th>
+              <th class="orde" data-ord="setor">Setor</th>
+              <th class="orde" data-ord="adm">Admissão</th>
+              <th class="orde" data-ord="venc1" id="thExp1">1ª experiência</th>
+              <th class="orde" data-ord="decisao1">Prorrogar / dispensar</th>
+              <th class="orde" data-ord="venc2" id="thExp2">2ª experiência</th>
+              <th class="orde" data-ord="decisao2">Efetivar / dispensar</th>
+              <th>Obs.</th><th></th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="section-rodape">"Em experiência" mostra quem ainda está no período e quem terminou há até 30 dias sem decisão. Vencimento em <span class="venc laranja">laranja</span> faltam 8 a 15 dias; em <span class="venc vermelho">vermelho</span>, até 7 — some quando a decisão é registrada. <span class="pend">!</span> vencida sem decisão. As opções dos menus vêm da Base.</div>
       </div>
     </div>
   </div>
@@ -675,8 +728,8 @@
 // =====================================================================
 // QLP - Fagron Services Brazil
 // =====================================================================
-const VERSAO_APP = 7;              // subir sempre que o formato dos dados mudar
-const ROTULO_VERSAO = 'QLP v2.8';
+const VERSAO_APP = 8;              // subir sempre que o formato dos dados mudar
+const ROTULO_VERSAO = 'QLP v2.9';
 const GH_API = 'https://api.github.com';
 const REPO_PADRAO = 'RecrutamentoeSelecao/qlp-fagron-dados';   // repositório privado dos dados
 const ARQUIVO = 'dados.json';
@@ -692,8 +745,8 @@ const PERFIS = { admin: 'ADMINISTRADORA', equipe: 'EQUIPE' };
 const PERMISSOES = [
   { k: 'ver',        rotulo: 'Ver colaboradores',                  admin: true,  equipe: true  },
   { k: 'cadastrar',  rotulo: 'Cadastrar e editar colaboradores',   admin: true,  equipe: true  },
-  { k: 'prorrogar',  rotulo: 'Prorrogar 45D',                      admin: true,  equipe: true  },
-  { k: 'efetivar',   rotulo: 'Efetivar 90D',                       admin: true,  equipe: true  },
+  { k: 'prorrogar',  rotulo: 'Decidir a 1ª experiência (prorrogar/dispensar)', admin: true, equipe: true },
+  { k: 'efetivar',   rotulo: 'Decidir a 2ª experiência (efetivar/dispensar)',  admin: true, equipe: true },
   { k: 'excluir',    rotulo: 'Excluir colaborador',                admin: true,  equipe: false },
   { k: 'parametros', rotulo: 'Editar parâmetros',                  admin: true,  equipe: false },
   { k: 'base',       rotulo: 'Editar base',                        admin: true,  equipe: false },
@@ -711,6 +764,8 @@ const LISTAS = [
   { k: 'setores',  rotulo: 'Setores',               campo: 'setor' },
   { k: 'turnos',   rotulo: 'Turnos',                campo: 'turno' },
   { k: 'motivos',  rotulo: 'Motivos da saída',      campo: 'motivoSaida' },
+  { k: 'decisao1', rotulo: 'Decisões da 1ª experiência', campo: 'decisao1' },
+  { k: 'decisao2', rotulo: 'Decisões da 2ª experiência', campo: 'decisao2' },
 ];
 
 // Listas da aba "Listas" da planilha QLP_Produção.xlsx (28/09/2026), em caixa alta e sem repetidos.
@@ -1015,7 +1070,12 @@ async function puxar() {
   const baseCofre = anterior && anterior.cofre && anterior.cofre.idBase === ID_BASE ? anterior.cofre : null;
   const base = baseCofre ? normalizarEstado(await decifrar(baseCofre)) : { colaboradores: [], pessoas: [], parametros: undefined, base: baseVazia() };
   const fc = fundirLista(base.colaboradores, ESTADO.colaboradores, deles.colaboradores,
-    (b, m, d) => ({ ...m, notas: fundirLista(b && b.notas, m.notas, d.notas).lista }));
+    (b, m, d) => {
+      const r = {};
+      new Set([...Object.keys(m), ...Object.keys(d)]).forEach(k => { r[k] = assin(m[k]) === assin(b && b[k]) ? d[k] : m[k]; });
+      r.notas = fundirLista(b && b.notas, m.notas, d.notas).lista;
+      return r;
+    });
   const fp = fundirLista(base.pessoas, ESTADO.pessoas, deles.pessoas);
   const fk = fundirLista(baseCofre ? baseCofre.chaves : [], CHAVES, r.cofre.chaves);
   ESTADO = {
@@ -1239,15 +1299,17 @@ async function fazerLogin() {
   if (pendenteModo()) gravarAgora();
 }
 
+const SEMENTE_DECISOES = { id: 'decisoes-experiencia-2026-09-29', listas: { decisao1: ['PRORROGAR', 'DISPENSAR'], decisao2: ['EFETIVAR', 'DISPENSAR'] } };
 function semearBase() {
   if (!EU || EU.perfil !== 'admin') return;
-  const feitas = ESTADO.sementes || [];
-  if (feitas.includes(SEMENTE_BASE.id)) return;
-  let n = 0;
-  LISTAS.forEach(l => { n += incluirNaLista(l.k, SEMENTE_BASE.listas[l.k] || []).novos; });
-  ESTADO.sementes = [...feitas, SEMENTE_BASE.id];
-  alterou();
-  mostrarAviso(`Base preenchida com as listas da planilha: ${n} itens`);
+  let n = 0, mudou = false;
+  [SEMENTE_BASE, SEMENTE_DECISOES].forEach(sem => {
+    const feitas = ESTADO.sementes || [];
+    if (feitas.includes(sem.id)) return;
+    LISTAS.forEach(l => { n += incluirNaLista(l.k, sem.listas[l.k] || []).novos; });
+    ESTADO.sementes = [...feitas, sem.id]; mudou = true;
+  });
+  if (mudou) { alterou(); if (n) mostrarAviso(`Base atualizada: ${n} item(ns) incluído(s)`); }
 }
 function entrarNoApp() {
   $('telaLogin').style.display = 'none';
@@ -1434,6 +1496,7 @@ function render() {
   atualizarPainel();
   renderizarColaboradores();
   renderizarHistorico();
+  renderizarExperiencia();
   renderizarParametros();
   renderizarPessoas();
   renderizarBase();
@@ -1468,12 +1531,13 @@ function mostrarEstado() {
 function atualizarPainel() {
   let n1 = 0, n2 = 0, ef = 0;
   const proximos = [];
-  const vigentes = ESTADO.colaboradores.filter(c => !ehDesligado(c));
+  const vigentes = ESTADO.colaboradores.filter(c => !ehDesligado(c) && ehCLT(c));
   vigentes.forEach(c => {
     const s = situacao(c); if (!s) return;
-    if (s.fase === 'p1' && s.faltam1 <= JANELA_ALERTA) { n1++; proximos.push({ c, qual: '1ª avaliação', data: s.venc1, faltam: s.faltam1 }); }
-    if (s.fase === 'p2' && s.faltam2 <= JANELA_ALERTA) { n2++; proximos.push({ c, qual: '2ª avaliação', data: s.venc2, faltam: s.faltam2 }); }
-    if (s.fase === 'fim') ef++;
+    const p = decisaoPendente(c);
+    if (p && p.qual === 1 && p.faltam >= 0 && p.faltam <= JANELA_ALERTA) { n1++; proximos.push({ c, qual: '1ª experiência', data: s.venc1, faltam: p.faltam }); }
+    if (p && p.qual === 2 && p.faltam >= 0 && p.faltam <= JANELA_ALERTA) { n2++; proximos.push({ c, qual: '2ª experiência', data: s.venc2, faltam: p.faltam }); }
+    if (semAcento(c.decisao2) === 'EFETIVAR') ef++;
   });
   const conta = v => ESTADO.colaboradores.filter(c => semAcento(c.status) === v).length;
   $('totalColaboradores').textContent = ESTADO.colaboradores.filter(c => ['ATIVO', ''].includes(semAcento(c.status || ''))).length;
@@ -1481,9 +1545,9 @@ function atualizarPainel() {
   $('em45Dias').textContent = n1;
   $('em90Dias').textContent = n2;
   $('efetivados').textContent = ef;
-  $('nota45').textContent = `vencem nos próximos ${JANELA_ALERTA} dias`;
-  $('nota90').textContent = `vencem nos próximos ${JANELA_ALERTA} dias`;
-  $('notaEfet').textContent = `período de ${ESTADO.parametros.periodo2} dias concluído`;
+  $('nota45').textContent = `CLT sem decisão, vencem em até ${JANELA_ALERTA} dias`;
+  $('nota90').textContent = `CLT sem decisão, vencem em até ${JANELA_ALERTA} dias`;
+  $('notaEfet').textContent = 'com decisão de efetivar registrada';
   $('notaProximos').textContent = `próximos ${JANELA_ALERTA} dias`;
 
   proximos.sort((a, b) => a.data - b.data || a.c.nome.localeCompare(b.c.nome, 'pt-BR'));
@@ -1491,7 +1555,7 @@ function atualizarPainel() {
   tb.innerHTML = proximos.length ? proximos.map(x => `<tr>
       <td>${esc(x.c.nome)}</td><td>${esc(x.c.cargo)}</td><td>${esc(x.c.gestor) || '—'}</td>
       <td>${x.qual}</td><td>${fmt(x.data)}</td><td class="num"><strong>${faltamTexto(x.faltam)}</strong></td></tr>`).join('')
-    : `<tr><td colspan="6" class="empty-state">Nenhuma avaliação vence nos próximos ${JANELA_ALERTA} dias.</td></tr>`;
+    : `<tr><td colspan="6" class="empty-state">Nenhuma decisão de experiência vence nos próximos ${JANELA_ALERTA} dias.</td></tr>`;
 }
 
 function renderizarParametros() {
@@ -2197,6 +2261,127 @@ setInterval(() => {
 }, 60000);
 
 // ---------------------------------------------------------------------
+// Controle do período de experiência (só contratos CLT)
+// ---------------------------------------------------------------------
+const CLASSE_DECISAO = { 'PRORROGAR': 'dc-ambar', 'DISPENSAR': 'dc-vermelho', 'EFETIVAR': 'dc-verde' };
+let ordemE = { campo: 'posicao', asc: true };
+function ehCLT(c) { return semAcento(c.tipo) === 'CLT'; }
+function dispensadoNa1(c) { return semAcento(c.decisao1) === 'DISPENSAR'; }
+// O que falta decidir, e quão urgente: devolve { qual: 1|2, faltam } ou null
+function decisaoPendente(c) {
+  const s = situacao(c); if (!s || ehDesligado(c)) return null;
+  if (!c.decisao1) return { qual: 1, faltam: s.faltam1 };
+  if (dispensadoNa1(c)) return null;
+  if (!c.decisao2) return { qual: 2, faltam: s.faltam2 };
+  return null;
+}
+function emExperiencia(c) {
+  const s = situacao(c); if (!s || ehDesligado(c)) return false;
+  if (s.fase !== 'fim') return true;
+  const p = decisaoPendente(c);
+  return !!p && p.faltam >= -30;                 // encerrada há até 30 dias e ainda sem decisão
+}
+function aguardando(c) { const p = decisaoPendente(c); return !!p && p.faltam <= 15 && p.faltam >= -30; }
+
+function menuDecisao(c, n) {
+  const campo = 'decisao' + n, lista = 'decisao' + n, perm = n === 1 ? 'prorrogar' : 'efetivar';
+  const valor = c[campo] || '';
+  const bloqueado = n === 2 && dispensadoNa1(c);
+  if (bloqueado) return '<span class="cinza-txt">—</span>';
+  const quem = c[campo + 'Por'] ? `${c[campo + 'Por']} em ${new Date(c[campo + 'Em']).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}` : '';
+  if (!pode(perm)) return valor ? `<span class="decisao ${CLASSE_DECISAO[semAcento(valor)] || ''}" title="${esc(quem)}">${esc(valor)}</span>` : '—';
+  const itens = ordenar(ESTADO.base[lista]);
+  const fora = valor && !itens.some(v => semAcento(v) === semAcento(valor));
+  return `<select class="sel-decisao ${CLASSE_DECISAO[semAcento(valor)] || ''}" data-id="${esc(c.id)}" data-n="${n}" onchange="decidir(this)"
+      aria-label="Decisão da ${n}ª experiência de ${esc(c.nome)}" title="${esc(quem || 'Escolha como seguir')}">
+    <option value="">— decidir —</option>${fora ? `<option value="${esc(valor)}">${esc(valor)}</option>` : ''}
+    ${itens.map(v => `<option value="${esc(v)}"${semAcento(v) === semAcento(valor) ? ' selected' : ''}>${esc(v)}</option>`).join('')}
+  </select>`;
+}
+function decidir(el) {
+  const n = +el.dataset.n, perm = n === 1 ? 'prorrogar' : 'efetivar';
+  if (!pode(perm)) return;
+  const c = porId(el.dataset.id); if (!c) return;
+  const campo = 'decisao' + n, valor = el.value;
+  if (n === 1 && semAcento(valor) === 'DISPENSAR' && c.decisao2) {
+    if (!confirm(`${c.nome} já tem decisão na 2ª experiência (${c.decisao2}). Dispensar na 1ª apaga essa decisão. Continuar?`)) { renderizarExperiencia(); return; }
+    c.decisao2 = ''; c.decisao2Por = ''; c.decisao2Em = '';
+  }
+  c[campo] = valor;
+  c[campo + 'Por'] = valor ? EU.nome : '';
+  c[campo + 'Em'] = valor ? agoraISO() : '';
+  c._por = EU.nome; c._em = agoraISO();
+  alterou(); render();
+  mostrarAviso(valor ? `${c.nome}: ${valor} na ${n}ª experiência` : `Decisão da ${n}ª experiência apagada`);
+}
+function valorOrdemE(c, campo) {
+  if (campo === 'decisao1' || campo === 'decisao2') return semAcento(c[campo] || '~');
+  return valorOrdem(c, campo);
+}
+function ordenarExp(campo) {
+  if (campo === 'posicao') ordemE = { campo, asc: true };
+  else ordemE = ordemE.campo === campo ? { campo, asc: !ordemE.asc } : { campo, asc: true };
+  renderizarExperiencia();
+}
+function limparFiltrosExp() {
+  $('filtroExp').value = 'experiencia'; $('filtroGestorE').value = ''; $('buscaExp').value = '';
+  ordemE = { campo: 'posicao', asc: true };
+  renderizarExperiencia();
+}
+function celDecisaoPendente(c, n, s) {
+  const p = decisaoPendente(c);
+  return p && p.qual === n && p.faltam < 0 ? ' pendente' : '';
+}
+function renderizarExperiencia() {
+  const tbody = document.querySelector('#tabelaExperiencia tbody');
+  const clt = ESTADO.colaboradores.filter(ehCLT);
+  preencherFiltro('filtroGestorE', 'Todos os gestores', ordenar([...new Set(clt.map(c => c.gestor).filter(Boolean))]).map(v => [v, v]));
+  const f = $('filtroExp').value, g = $('filtroGestorE').value, termo = semAcento($('buscaExp').value.trim());
+  const lista = clt
+    .filter(c => f === 'todos' ? true : f === 'aguardando' ? aguardando(c) : f === 'decididas' ? (c.decisao1 || c.decisao2) : emExperiencia(c))
+    .filter(c => !g || c.gestor === g)
+    .filter(c => !termo || semAcento([c.matricula, c.nome, c.cargo, c.gestor, c.setor, c.decisao1, c.decisao2].join(' ')).includes(termo))
+    .sort((a, b) => {
+      const x = valorOrdemE(a, ordemE.campo), y = valorOrdemE(b, ordemE.campo);
+      const r = x < y ? -1 : x > y ? 1 : (valorOrdem(a, 'posicao') - valorOrdem(b, 'posicao'));
+      return ordemE.asc ? r : -r;
+    });
+  document.querySelectorAll('#tabelaExperiencia th.orde').forEach(th => {
+    th.classList.toggle('ativo', th.dataset.ord === ordemE.campo);
+    th.dataset.seta = th.dataset.ord === ordemE.campo && ordemE.campo !== 'posicao' ? (ordemE.asc ? '▲' : '▼') : '';
+  });
+  $('thExp1').textContent = `1ª experiência (${ESTADO.parametros.periodo1}d)`;
+  $('thExp2').textContent = `2ª experiência (${ESTADO.parametros.periodo2}d)`;
+  const nEm = clt.filter(emExperiencia).length, nAg = clt.filter(aguardando).length;
+  const nVenc = clt.filter(c => { const p = decisaoPendente(c); return p && p.faltam < 0 && p.faltam >= -30; }).length;
+  $('contagemExp').textContent = `${lista.length} na lista · ${nEm} em experiência · ${nAg} aguardando decisão${nVenc ? ` · ${nVenc} vencida(s) sem decisão` : ''}`;
+  if (!lista.length) { tbody.innerHTML = `<tr><td colspan="13" class="empty-state">${clt.length ? 'Ninguém nesta situação.' : 'Nenhum colaborador CLT cadastrado.'}</td></tr>`; return; }
+  tbody.innerHTML = lista.map((c, i) => {
+    const s = situacao(c);
+    const nNotas = (c.notas || []).length;
+    const p = decisaoPendente(c);
+    const aviso = p && p.faltam < 0 ? `<span class="pend" title="${p.qual}ª experiência vencida há ${-p.faltam} dia(s) sem decisão">!</span>` : '';
+    return `<tr${ehDesligado(c) ? ' class="desligado-hist"' : ''}>
+      <td class="num fixa">${i + 1}</td>
+      <td class="auto">${esc(c.matricula) || '—'}</td>
+      <td class="auto nome">${esc(c.nome)}</td>
+      <td class="auto">${esc(c.cargo)}</td>
+      <td class="auto">${esc(c.gestor) || '—'}</td>
+      <td class="auto">${esc(c.setor) || '—'}</td>
+      <td class="auto data">${esc(c.dataAdmissao)}</td>
+      ${s ? celVenc(s.venc1, c.decisao1 ? 99 : s.faltam1, c) : '<td>—</td>'}
+      <td class="decisao-cel${celDecisaoPendente(c, 1, s)}">${menuDecisao(c, 1)}</td>
+      ${s ? (dispensadoNa1(c) ? '<td class="cinza-txt">—</td>' : celVenc(s.venc2, c.decisao2 ? 99 : s.faltam2, c)) : '<td>—</td>'}
+      <td class="decisao-cel${celDecisaoPendente(c, 2, s)}">${menuDecisao(c, 2)}</td>
+      <td class="centro">${pode('cadastrar')
+        ? `<button class="notinha${nNotas ? ' tem' : ''}" onclick="abrirCadastro('${esc(c.id)}', true)" aria-label="Observações de ${esc(c.nome)}" title="${nNotas ? esc(c.notas[c.notas.length - 1].texto) : 'Sem observações'}">📝${nNotas ? ` ${nNotas}` : ''}</button>`
+        : (nNotas ? `📝 ${nNotas}` : '')}</td>
+      <td>${aviso}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ---------------------------------------------------------------------
 // Dados: exportar, cópia de segurança, restaurar, apagar
 // ---------------------------------------------------------------------
 function baixar(nome, texto, tipo) {
@@ -2211,13 +2396,13 @@ function hojeArquivo() { const d = hoje(); return `${d.getFullYear()}-${String(d
 function exportarCSV() {
   if (!pode('dados')) return;
   const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  let csv = '\uFEFFNº;MATRÍCULA;NOME COMPLETO;CARGO;TIPO DE CONTRATAÇÃO;DATA DE ADMISSÃO;VENCIMENTO 1ª EXPERIÊNCIA;VENCIMENTO 2ª EXPERIÊNCIA;STATUS;GESTOR IMEDIATO;SETOR;TURNO;DATA DE DESLIGAMENTO;TEMPO DE EMPRESA;MOTIVO DA SAÍDA;SUBSTITUIU;SUBSTITUÍDO POR;OBSERVAÇÕES\n';
+  let csv = '\uFEFFNº;MATRÍCULA;NOME COMPLETO;CARGO;TIPO DE CONTRATAÇÃO;DATA DE ADMISSÃO;VENCIMENTO 1ª EXPERIÊNCIA;VENCIMENTO 2ª EXPERIÊNCIA;STATUS;GESTOR IMEDIATO;SETOR;TURNO;DATA DE DESLIGAMENTO;TEMPO DE EMPRESA;MOTIVO DA SAÍDA;SUBSTITUIU;SUBSTITUÍDO POR;DECISÃO 1ª EXPERIÊNCIA;DECISÃO 2ª EXPERIÊNCIA;OBSERVAÇÕES\n';
   let n = 0;
   [...ESTADO.colaboradores].sort((a, b) => (+a.posicao || 1e9) - (+b.posicao || 1e9)).forEach(col => {
     const s = situacao(col);
     const obs = (col.notas || []).map(n => `${new Date(n.em).toLocaleDateString('pt-BR')} ${n.por}: ${n.texto}`).join(' | ');
     csv += [++n, q(col.matricula), q(col.nome), q(col.cargo), q(col.tipo), q(col.dataAdmissao),
-      q(s ? fmt(s.venc1) : ''), q(s ? fmt(s.venc2) : ''), q(col.status), q(col.gestor), q(col.setor), q(col.turno), q(col.dataDesligamento), q(tempoDeEmpresa(col)), q(col.motivoSaida), q((porId(col.substituiu) || {}).nome), q((porId(col.substituidoPor) || {}).nome), q(obs)].join(';') + '\n';
+      q(s ? fmt(s.venc1) : ''), q(s ? fmt(s.venc2) : ''), q(col.status), q(col.gestor), q(col.setor), q(col.turno), q(col.dataDesligamento), q(tempoDeEmpresa(col)), q(col.motivoSaida), q((porId(col.substituiu) || {}).nome), q((porId(col.substituidoPor) || {}).nome), q(col.decisao1), q(col.decisao2), q(obs)].join(';') + '\n';
   });
   baixar(`qlp-${hojeArquivo()}.csv`, csv, 'text/csv;charset=utf-8;');
 }
@@ -2278,6 +2463,8 @@ document.addEventListener('click', e => {
   if (th) ordenarPor(th.dataset.ord);
   const thh = e.target.closest && e.target.closest('#tabelaHistorico th.ordh');
   if (thh) ordenarHist(thh.dataset.ord);
+  const the = e.target.closest && e.target.closest('#tabelaExperiencia th.orde');
+  if (the) ordenarExp(the.dataset.ord);
 });
 let avisoTimer;
 function mostrarAviso(txt) {

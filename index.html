@@ -317,6 +317,8 @@
     table.cruzada td.cruz{font-weight:600;font-variant-numeric:tabular-nums}
     table.cruzada td.total,table.cruzada tfoot td{font-weight:700;background:var(--faixa)}
     @media (max-width:900px){.turnover{grid-template-columns:1fr}}
+    .chk-perm{width:18px;height:18px;accent-color:var(--vermelho);cursor:pointer}
+    #janelaCadastro.so-notas .janela-corpo > .campo:not(.notas){opacity:.6}
     .dica-novo{color:var(--ambar);font-weight:600}
     .explica{padding:10px 16px;font-size:12.5px;line-height:1.5;color:var(--texto-2);border-bottom:1px solid var(--linha-leve);background:#FCFBFA}
     .explica strong{color:var(--texto);font-weight:600}
@@ -812,7 +814,7 @@
 // QLP - Fagron Services Brazil
 // =====================================================================
 const VERSAO_APP = 9;              // subir sempre que o formato dos dados mudar
-const ROTULO_VERSAO = 'QLP v2.14';
+const ROTULO_VERSAO = 'QLP v2.15';
 const GH_API = 'https://api.github.com';
 const REPO_PADRAO = 'RecrutamentoeSelecao/qlp-fagron-dados';   // repositório privado dos dados
 const ARQUIVO = 'dados.json';
@@ -827,7 +829,8 @@ const PERFIS = { admin: 'ADMINISTRADORA', equipe: 'EQUIPE' };
 // A matriz exibida em Parâmetros é a mesma que o sistema consulta.
 const PERMISSOES = [
   { k: 'ver',        rotulo: 'Ver colaboradores',                  admin: true,  equipe: true  },
-  { k: 'cadastrar',  rotulo: 'Cadastrar e editar colaboradores',   admin: true,  equipe: true  },
+  { k: 'cadastrar',  rotulo: 'Cadastrar e editar colaboradores',   admin: true,  equipe: false },
+  { k: 'anotar',     rotulo: 'Escrever observações nos colaboradores', admin: true, equipe: true },
   { k: 'prorrogar',  rotulo: 'Decidir a 1ª experiência (prorrogar/dispensar)', admin: true, equipe: true },
   { k: 'efetivar',   rotulo: 'Decidir a 2ª experiência (efetivar/dispensar)',  admin: true, equipe: true },
   { k: 'excluir',    rotulo: 'Excluir colaborador',                admin: true,  equipe: false },
@@ -1564,7 +1567,27 @@ function desligarComputador() {
 // ---------------------------------------------------------------------
 // Permissões
 // ---------------------------------------------------------------------
-function pode(k) { const p = PERMISSOES.find(x => x.k === k); return !!(p && EU && p[EU.perfil]); }
+const SO_ADMIN = ['parametros', 'usuarios'];          // nunca liberáveis para a equipe
+function pode(k) {
+  const p = PERMISSOES.find(x => x.k === k); if (!p || !EU) return false;
+  if (EU.perfil === 'admin') return p.admin;
+  if (SO_ADMIN.includes(k)) return false;
+  const ajuste = (ESTADO.parametros.permEquipe || {})[k];
+  return typeof ajuste === 'boolean' ? ajuste : p.equipe;
+}
+function permEquipe(k) {
+  const p = PERMISSOES.find(x => x.k === k);
+  if (SO_ADMIN.includes(k)) return false;
+  const ajuste = (ESTADO.parametros.permEquipe || {})[k];
+  return typeof ajuste === 'boolean' ? ajuste : p.equipe;
+}
+function mudarPermissao(el) {
+  if (!pode('parametros')) return;
+  const k = el.dataset.k; if (SO_ADMIN.includes(k)) return;
+  ESTADO.parametros.permEquipe = { ...(ESTADO.parametros.permEquipe || {}), [k]: el.checked };
+  alterou(); render();
+  mostrarAviso(`Equipe ${el.checked ? 'passa a poder' : 'não pode mais'}: ${PERMISSOES.find(x => x.k === k).rotulo.toLowerCase()}`);
+}
 function aplicarPermissoes() {
   document.querySelectorAll('[data-pode]').forEach(el => { el.hidden = !pode(el.dataset.pode); });
   document.querySelectorAll('[data-edita]').forEach(el => { el.disabled = !pode(el.dataset.edita); });
@@ -1824,9 +1847,12 @@ function renderizarParametros() {
   $('pilGravar').checked = p.gravarSozinho !== false;
   $('pilBuscar').checked = p.buscarSozinho !== false;
   $('versaoTxt').textContent = ROTULO_VERSAO;
+  const marca = v => v ? '<span class="ok-txt">✓</span>' : '<span class="nao-txt">✕</span>';
   $('matriz').innerHTML = PERMISSOES.map(x => `<tr><td>${x.rotulo}</td>
-    <td class="centro">${x.admin ? '<span class="ok-txt">✓</span>' : '<span class="nao-txt">✕</span>'}</td>
-    <td class="centro">${x.equipe ? '<span class="ok-txt">✓</span>' : '<span class="nao-txt">✕</span>'}</td></tr>`).join('');
+    <td class="centro">${marca(x.admin)}</td>
+    <td class="centro">${x.k === 'ver' ? '<span class="ok-txt" title="Todos que entram veem os colaboradores">✓ 🔒</span>' : SO_ADMIN.includes(x.k) ? `<span class="nao-txt" title="Sempre só da administradora">✕ 🔒</span>`
+      : pode('parametros') ? `<input type="checkbox" class="chk-perm" data-k="${x.k}" ${permEquipe(x.k) ? 'checked' : ''} onchange="mudarPermissao(this)" aria-label="Equipe: ${esc(x.rotulo)}">`
+      : marca(permEquipe(x.k))}</td></tr>`).join('');
 }
 
 function salvarParametros() {
@@ -2215,7 +2241,7 @@ function renderizarColaboradores() {
       <td>${esc(col.setor) || '—'}</td>
       <td>${esc(col.turno) || '—'}</td>
       <td>${celSexo(col)}</td>
-      <td class="centro">${pode('cadastrar')
+      <td class="centro">${pode('anotar')
         ? `<button class="notinha${nNotas ? ' tem' : ''}" onclick="abrirCadastro('${esc(col.id)}', true)" aria-label="Observações de ${esc(col.nome)}" title="${nNotas ? esc(col.notas[col.notas.length - 1].texto) : 'Sem observações'}">📝${nNotas ? ` ${nNotas}` : ''}</button>`
         : (nNotas ? `<span title="${esc(col.notas[col.notas.length - 1].texto)}">📝 ${nNotas}</span>` : '')}</td>
       <td class="acoes">
@@ -2262,8 +2288,10 @@ function apagarNota(i) {
   renderizarNotas();
 }
 
+let modoNotas = false;
 function abrirCadastro(id, focarNotas, focarMov) {
-  if (!pode('cadastrar')) return;
+  modoNotas = !pode('cadastrar') && pode('anotar') && id != null;
+  if (!pode('cadastrar') && !modoNotas) return;
   editandoId = id ?? null;
   const col = editandoId != null ? ESTADO.colaboradores.find(c => c.id === editandoId) : null;
   $('janelaTitulo').textContent = col ? `Editar — ${col.nome}` : 'Novo colaborador';
@@ -2285,7 +2313,10 @@ function abrirCadastro(id, focarNotas, focarMov) {
   $('autoriaJanela').textContent = col && col._por ? `Última alteração: ${col._por}, ${new Date(col._em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}` : '';
   renderizarNotas(); mostrarVencimentos(); limparErros();
   $('janelaCadastro').classList.add('aberta');
-  (focarNotas ? $('cNota') : focarMov ? $('cDeslig') : col ? $('cNome') : $('cMatricula')).focus();
+  document.querySelectorAll('#janelaCadastro input, #janelaCadastro select').forEach(e => { e.disabled = modoNotas; });
+  $('janelaCadastro').classList.toggle('so-notas', modoNotas);
+  if (modoNotas) { $('janelaTitulo').textContent = `Observações — ${col.nome}`; $('btnSalvarColab').textContent = 'Salvar observações'; }
+  (modoNotas || focarNotas ? $('cNota') : focarMov ? $('cDeslig') : col ? $('cNome') : $('cMatricula')).focus();
   if (focarMov) $('blocoMov').scrollIntoView({ block: 'start' });
 }
 function fecharCadastro() {
@@ -2294,8 +2325,16 @@ function fecharCadastro() {
 }
 
 function salvarCadastro() {
-  if (!pode('cadastrar')) return;
   if ($('cNota').value.trim()) adicionarNota();          // observação digitada e não adicionada entra junto
+  if (modoNotas) {                                          // equipe: só as observações mudam
+    const col = ESTADO.colaboradores.find(c => c.id === editandoId);
+    if (!col || !pode('anotar')) return;
+    col.notas = notasEdicao; col._por = EU.nome; col._em = agoraISO();
+    $('janelaCadastro').classList.remove('aberta'); editandoId = null; modoNotas = false;
+    alterou(); render(); mostrarAviso('Observações salvas');
+    return;
+  }
+  if (!pode('cadastrar')) return;
   limparErros();
   const lerMenu = id => { const v = $(id).value; return v === NOVO ? '' : v; };
   const posicao = anteriorPos();
@@ -2562,7 +2601,7 @@ function renderizarHistorico() {
       <td class="motivo">${c.motivoSaida ? esc(c.motivoSaida) : (c.dataDesligamento ? '<span class="falta">informar</span>' : '—')}</td>
       <td>${nomeLigado(c.substituiu)}</td>
       <td>${nomeLigado(c.substituidoPor)}</td>
-      <td class="centro">${pode('cadastrar')
+      <td class="centro">${pode('anotar')
         ? `<button class="notinha${nNotas ? ' tem' : ''}" onclick="abrirCadastro('${esc(c.id)}', true)" aria-label="Observações de ${esc(c.nome)}" title="${nNotas ? esc(c.notas[c.notas.length - 1].texto) : 'Sem observações'}">📝${nNotas ? ` ${nNotas}` : ''}</button>`
         : (nNotas ? `📝 ${nNotas}` : '')}</td>
       <td class="acoes">${pode('cadastrar') ? `<button class="btn btn-secondary" onclick="abrirCadastro('${esc(c.id)}', false, true)" aria-label="Movimentar ${esc(c.nome)}">Editar</button>` : ''}${pend.length ? ` <span class="alerta" title="${esc(pend.join(' · '))}">!</span>` : ''}</td>
@@ -2696,7 +2735,7 @@ function renderizarExperiencia() {
       <td class="decisao-cel${celDecisaoPendente(c, 1, s)}">${menuDecisao(c, 1)}</td>
       ${s ? (dispensadoNa1(c) ? '<td class="cinza-txt">—</td>' : celVenc(s.venc2, c.decisao2 ? 99 : s.faltam2, c)) : '<td>—</td>'}
       <td class="decisao-cel${celDecisaoPendente(c, 2, s)}">${menuDecisao(c, 2)}</td>
-      <td class="centro">${pode('cadastrar')
+      <td class="centro">${pode('anotar')
         ? `<button class="notinha${nNotas ? ' tem' : ''}" onclick="abrirCadastro('${esc(c.id)}', true)" aria-label="Observações de ${esc(c.nome)}" title="${nNotas ? esc(c.notas[c.notas.length - 1].texto) : 'Sem observações'}">📝${nNotas ? ` ${nNotas}` : ''}</button>`
         : (nNotas ? `📝 ${nNotas}` : '')}</td>
       <td>${aviso}</td>
